@@ -1,13 +1,41 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useAuth, AuthProvider } from '@/hooks/useAuth';
+import { AuthForm } from '@/components/AuthForm';
+import { UserDashboard } from '@/components/UserDashboard';
+import { AdminDashboard } from '@/components/AdminDashboard';
+import { Waves } from 'lucide-react';
+
+function AppContent() {
+  const { user, loading, isAdmin } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-hero">
+        <div className="text-center animate-pulse">
+          <div className="w-20 h-20 bg-primary-foreground/20 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-wave">
+            <Waves className="w-10 h-10 text-primary-foreground" />
+          </div>
+          <p className="text-primary-foreground text-lg">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthForm />;
+  }
+
+  if (isAdmin) {
+    return <AdminDashboard />;
+  }
+
+  return <UserDashboard />;
+}
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 
