@@ -8,11 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus } from 'lucide-react';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { exportToCSV, PaymentExportRow } from '@/lib/exportUtils';
 
 function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSuccess: () => void }) {
   const [entrances, setEntrances] = useState('');
@@ -247,6 +248,7 @@ export function AdminDashboard() {
   const { user, signOut } = useAuth();
   const { data: users = [], isLoading, refetch } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
   const filteredUsers = users.filter((u) =>
     u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -256,6 +258,42 @@ export function AdminDashboard() {
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalPaid = users.reduce((sum, u) => sum + u.totalPaid, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
+
+  const handleExportPayments = () => {
+    const allPayments: PaymentExportRow[] = [];
+    
+    users.forEach(user => {
+      user.credits.forEach(credit => {
+        allPayments.push({
+          userName: user.profile.full_name,
+          entrancesAdded: credit.entrances_added,
+          amountPaid: Number(credit.amount_paid),
+          paymentDate: credit.payment_date,
+          notes: credit.notes,
+        });
+      });
+    });
+
+    // Sort by date descending
+    allPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+
+    if (allPayments.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nessun dato',
+        description: 'Non ci sono versamenti da esportare.',
+      });
+      return;
+    }
+
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    exportToCSV(allPayments, `versamenti_${dateStr}`);
+    
+    toast({
+      title: 'Export completato!',
+      description: `${allPayments.length} versamenti esportati.`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -323,15 +361,20 @@ export function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cerca utente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Export */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca utente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleExportPayments} variant="outline" className="shrink-0">
+            <Download className="w-4 h-4 mr-2" /> Esporta CSV
+          </Button>
         </div>
 
         {/* Users List */}
