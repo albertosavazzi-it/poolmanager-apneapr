@@ -31,60 +31,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let initialSessionChecked = false;
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!isMounted) return;
+        
+        // Se è un evento INITIAL_SESSION o abbiamo già verificato, processiamo
+        if (event === 'INITIAL_SESSION') {
+          initialSessionChecked = true;
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const isAdminUser = await checkAdminRole(session.user.id);
-          if (isMounted) {
-            setIsAdmin(isAdminUser);
-          }
+          // Usa setTimeout per evitare deadlock con Supabase
+          setTimeout(async () => {
+            if (!isMounted) return;
+            const isAdminUser = await checkAdminRole(session.user.id);
+            if (isMounted) {
+              setIsAdmin(isAdminUser);
+              setLoading(false);
+            }
+          }, 0);
         } else {
           setIsAdmin(false);
-        }
-        
-        if (isMounted) {
           setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const isAdminUser = await checkAdminRole(session.user.id);
-          if (isMounted) {
-            setIsAdmin(isAdminUser);
-          }
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+    // Fallback: se dopo 2 secondi loading è ancora true, forza il completamento
+    const timeoutId = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn('Auth timeout - forcing loading to complete');
+        setLoading(false);
       }
-    };
-
-    initializeAuth();
+    }, 2000);
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeoutId);
     };
   }, []);
 
