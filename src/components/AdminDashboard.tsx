@@ -117,15 +117,6 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
   const { toast } = useToast();
 
   const handleDeductEntrance = async () => {
-    if (user.remainingEntrances <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Errore',
-        description: 'L\'utente non ha ingressi disponibili.',
-      });
-      return;
-    }
-
     try {
       await adminRegisterEntrance.mutateAsync(user.profile.user_id);
       toast({
@@ -158,7 +149,7 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
                 size="sm" 
                 variant="outline" 
                 onClick={handleDeductEntrance}
-                disabled={adminRegisterEntrance.isPending || user.remainingEntrances <= 0}
+                disabled={adminRegisterEntrance.isPending}
                 title="Scala ingresso"
               >
                 <Minus className="w-4 h-4 mr-1" /> Scala
@@ -168,8 +159,8 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mt-4">
-            <div className="text-center p-3 bg-secondary rounded-lg">
-              <p className="text-2xl font-bold text-primary">{user.remainingEntrances}</p>
+            <div className={`text-center p-3 rounded-lg ${user.remainingEntrances < 0 ? 'bg-destructive/10' : 'bg-secondary'}`}>
+              <p className={`text-2xl font-bold ${user.remainingEntrances < 0 ? 'text-destructive' : 'text-primary'}`}>{user.remainingEntrances}</p>
               <p className="text-xs text-muted-foreground">Rimanenti</p>
             </div>
             <div className="text-center p-3 bg-muted rounded-lg">

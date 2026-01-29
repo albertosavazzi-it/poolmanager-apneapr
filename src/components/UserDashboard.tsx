@@ -21,15 +21,6 @@ export function UserDashboard() {
   const [showCredits, setShowCredits] = useState(false);
 
   const handleRegisterEntrance = async () => {
-    if (remainingEntrances <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Nessun ingresso disponibile',
-        description: 'Contatta l\'amministratore per aggiungere ingressi.',
-      });
-      return;
-    }
-
     try {
       await registerEntrance.mutateAsync();
       toast({
@@ -85,26 +76,26 @@ export function UserDashboard() {
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Remaining Entrances Card */}
         <Card className="shadow-card overflow-hidden">
-          <div className="bg-gradient-primary p-6 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-foreground/20 rounded-full mb-4 animate-wave">
-              <Ticket className="w-10 h-10 text-primary-foreground" />
+          <div className={`p-6 text-center ${remainingEntrances < 0 ? 'bg-destructive' : 'bg-gradient-primary'}`}>
+            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 animate-wave ${remainingEntrances < 0 ? 'bg-destructive-foreground/20' : 'bg-primary-foreground/20'}`}>
+              <Ticket className={`w-10 h-10 ${remainingEntrances < 0 ? 'text-destructive-foreground' : 'text-primary-foreground'}`} />
             </div>
-            <h2 className="text-6xl font-bold text-primary-foreground mb-2">
+            <h2 className={`text-6xl font-bold mb-2 ${remainingEntrances < 0 ? 'text-destructive-foreground' : 'text-primary-foreground'}`}>
               {loadingEntrances ? '...' : remainingEntrances}
             </h2>
-            <p className="text-primary-foreground/80 text-lg">Ingressi rimanenti</p>
+            <p className={`text-lg ${remainingEntrances < 0 ? 'text-destructive-foreground/80' : 'text-primary-foreground/80'}`}>Ingressi rimanenti</p>
           </div>
           <CardContent className="p-6">
             <Button
               onClick={handleRegisterEntrance}
-              disabled={registerEntrance.isPending || remainingEntrances <= 0}
+              disabled={registerEntrance.isPending}
               className="w-full h-14 text-lg bg-gradient-primary shadow-soft hover:shadow-elevated transition-all"
             >
               {registerEntrance.isPending ? 'Registrazione...' : '🏊‍♂️ Registra Ingresso'}
             </Button>
-            {remainingEntrances <= 0 && (
-              <p className="text-center text-muted-foreground mt-3 text-sm">
-                Nessun ingresso disponibile. Contatta l'amministratore.
+            {remainingEntrances < 0 && (
+              <p className="text-center text-destructive mt-3 text-sm font-medium">
+                ⚠️ Attenzione: hai {Math.abs(remainingEntrances)} ingress{Math.abs(remainingEntrances) === 1 ? 'o' : 'i'} in debito. Contatta l'amministratore.
               </p>
             )}
           </CardContent>
