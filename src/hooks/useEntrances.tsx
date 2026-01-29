@@ -212,3 +212,22 @@ export function useAddCredits() {
     },
   });
 }
+
+export function useAdminRegisterEntrance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from('entrance_logs')
+        .insert({ user_id: userId });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users-entrances'] });
+      queryClient.invalidateQueries({ queryKey: ['remaining-entrances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-entrance-logs'] });
+    },
+  });
+}

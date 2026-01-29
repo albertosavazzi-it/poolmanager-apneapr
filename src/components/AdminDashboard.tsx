@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllUsersWithEntrances, useAddCredits, UserWithEntrances } from '@/hooks/useEntrances';
+import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -112,6 +112,34 @@ function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSucc
 
 function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const adminRegisterEntrance = useAdminRegisterEntrance();
+  const { toast } = useToast();
+
+  const handleDeductEntrance = async () => {
+    if (user.remainingEntrances <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: 'L\'utente non ha ingressi disponibili.',
+      });
+      return;
+    }
+
+    try {
+      await adminRegisterEntrance.mutateAsync(user.profile.user_id);
+      toast({
+        title: 'Ingresso scalato!',
+        description: `Ingresso registrato per ${user.profile.full_name}`,
+      });
+      onUpdate();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: 'Impossibile scalare l\'ingresso.',
+      });
+    }
+  };
 
   return (
     <Card className="shadow-soft animate-fade-in">
@@ -124,7 +152,18 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
                 Registrato il {format(new Date(user.profile.created_at), 'dd MMM yyyy', { locale: it })}
               </CardDescription>
             </div>
-            <AddCreditsDialog user={user} onSuccess={onUpdate} />
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleDeductEntrance}
+                disabled={adminRegisterEntrance.isPending || user.remainingEntrances <= 0}
+                title="Scala ingresso"
+              >
+                <Minus className="w-4 h-4 mr-1" /> Scala
+              </Button>
+              <AddCreditsDialog user={user} onSuccess={onUpdate} />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mt-4">
