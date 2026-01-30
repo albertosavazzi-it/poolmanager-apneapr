@@ -245,7 +245,17 @@ export function AdminDashboard() {
     u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalUsers = users.length;
+  // Conta utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const presentToday = users.filter((u) =>
+    u.logs.some((log) => {
+      const logDate = new Date(log.entrance_date);
+      logDate.setHours(0, 0, 0, 0);
+      return logDate.getTime() === today.getTime();
+    })
+  ).length;
+
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalPaid = users.reduce((sum, u) => sum + u.totalPaid, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
@@ -325,8 +335,8 @@ export function AdminDashboard() {
           <Card className="shadow-soft">
             <CardContent className="p-4 text-center">
               <Users className="w-8 h-8 mx-auto text-primary mb-2" />
-              <p className="text-2xl font-bold">{totalUsers}</p>
-              <p className="text-sm text-muted-foreground">Utenti</p>
+              <p className="text-2xl font-bold">{presentToday}</p>
+              <p className="text-sm text-muted-foreground">Presenti oggi</p>
             </CardContent>
           </Card>
           <Card className="shadow-soft">
