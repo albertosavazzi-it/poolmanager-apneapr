@@ -239,22 +239,24 @@ export function AdminDashboard() {
   const { user, signOut } = useAuth();
   const { data: users = [], isLoading, refetch } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPresentToday, setShowPresentToday] = useState(false);
   const { toast } = useToast();
 
   const filteredUsers = users.filter((u) =>
     u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Conta utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
+  // Utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const presentToday = users.filter((u) =>
+  const usersPresentToday = users.filter((u) =>
     u.logs.some((log) => {
       const logDate = new Date(log.entrance_date);
       logDate.setHours(0, 0, 0, 0);
       return logDate.getTime() === today.getTime();
     })
-  ).length;
+  );
+  const presentTodayCount = usersPresentToday.length;
 
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalPaid = users.reduce((sum, u) => sum + u.totalPaid, 0);
@@ -332,13 +334,47 @@ export function AdminDashboard() {
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="shadow-soft">
-            <CardContent className="p-4 text-center">
-              <Users className="w-8 h-8 mx-auto text-primary mb-2" />
-              <p className="text-2xl font-bold">{presentToday}</p>
-              <p className="text-sm text-muted-foreground">Presenti oggi</p>
-            </CardContent>
-          </Card>
+          <Dialog open={showPresentToday} onOpenChange={setShowPresentToday}>
+            <DialogTrigger asChild>
+              <Card className="shadow-soft cursor-pointer hover:shadow-elevated transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <Users className="w-8 h-8 mx-auto text-primary mb-2" />
+                  <p className="text-2xl font-bold">{presentTodayCount}</p>
+                  <p className="text-sm text-muted-foreground">Presenti oggi</p>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Presenti oggi ({presentTodayCount})</DialogTitle>
+                <DialogDescription>
+                  {format(today, 'EEEE d MMMM yyyy', { locale: it })}
+                </DialogDescription>
+              </DialogHeader>
+              {usersPresentToday.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato oggi</p>
+              ) : (
+                <div className="space-y-2">
+                  {usersPresentToday.map((u) => (
+                    <div key={u.profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <span className="font-medium">{u.profile.full_name}</span>
+                      <Badge variant="secondary">
+                        {u.logs.filter((log) => {
+                          const logDate = new Date(log.entrance_date);
+                          logDate.setHours(0, 0, 0, 0);
+                          return logDate.getTime() === today.getTime();
+                        }).length} ingress{u.logs.filter((log) => {
+                          const logDate = new Date(log.entrance_date);
+                          logDate.setHours(0, 0, 0, 0);
+                          return logDate.getTime() === today.getTime();
+                        }).length === 1 ? 'o' : 'i'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
           <Card className="shadow-soft">
             <CardContent className="p-4 text-center">
               <Ticket className="w-8 h-8 mx-auto text-accent mb-2" />
