@@ -34,6 +34,7 @@ export default {
   				'serif'
   			],
   			serif: [
+  				'Merriweather',
   				'ui-serif',
   				'Georgia',
   				'Cambria',
