@@ -8,12 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { exportToCSV, PaymentExportRow } from '@/lib/exportUtils';
+import { cn } from '@/lib/utils';
 
 function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSuccess: () => void }) {
   const [entrances, setEntrances] = useState('');
@@ -240,6 +243,8 @@ export function AdminDashboard() {
   const { data: users = [], isLoading, refetch } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
   const [showPresentToday, setShowPresentToday] = useState(false);
+  const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(undefined);
+  const [incomePopoverOpen, setIncomePopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const filteredUsers = users.filter((u) =>
@@ -259,8 +264,15 @@ export function AdminDashboard() {
   const presentTodayCount = usersPresentToday.length;
 
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
-  const totalPaid = users.reduce((sum, u) => sum + u.totalPaid, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
+  
+  // Calcola il totale incassato filtrato per data di partenza
+  const totalPaid = users.reduce((sum, u) => {
+    const filteredCredits = incomeStartDate
+      ? u.credits.filter((c) => new Date(c.payment_date) >= incomeStartDate)
+      : u.credits;
+    return sum + filteredCredits.reduce((cSum, c) => cSum + Number(c.amount_paid), 0);
+  }, 0);
 
   const handleExportPayments = () => {
     const allPayments: PaymentExportRow[] = [];
@@ -389,13 +401,54 @@ export function AdminDashboard() {
               <p className="text-sm text-muted-foreground">Ingressi usati</p>
             </CardContent>
           </Card>
-          <Card className="shadow-soft">
-            <CardContent className="p-4 text-center">
-              <Euro className="w-8 h-8 mx-auto text-success mb-2" />
-              <p className="text-2xl font-bold">€{totalPaid.toFixed(0)}</p>
-              <p className="text-sm text-muted-foreground">Totale incassato</p>
-            </CardContent>
-          </Card>
+          <Popover open={incomePopoverOpen} onOpenChange={setIncomePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Card className="shadow-soft cursor-pointer hover:shadow-elevated transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <Euro className="w-8 h-8 mx-auto text-success mb-2" />
+                  <p className="text-2xl font-bold">€{totalPaid.toFixed(0)}</p>
+                  <p className="text-sm text-muted-foreground">Totale incassato</p>
+                  {incomeStartDate && (
+                    <p className="text-xs text-primary mt-1">
+                      dal {format(incomeStartDate, 'dd/MM/yyyy')}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Filtra da data</p>
+                  {incomeStartDate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIncomeStartDate(undefined);
+                        setIncomePopoverOpen(false);
+                      }}
+                      className="h-7 px-2 text-muted-foreground"
+                    >
+                      <X className="w-3 h-3 mr-1" /> Rimuovi
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Calendar
+                mode="single"
+                selected={incomeStartDate}
+                onSelect={(date) => {
+                  setIncomeStartDate(date);
+                  setIncomePopoverOpen(false);
+                }}
+                disabled={(date) => date > new Date()}
+                initialFocus
+                locale={it}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Search and Export */}
