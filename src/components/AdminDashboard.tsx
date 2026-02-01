@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, UserWithEntrances } from '@/hooks/useEntrances';
+import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X } from 'lucide-react';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -117,6 +117,7 @@ function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSucc
 function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const adminRegisterEntrance = useAdminRegisterEntrance();
+  const deleteEntranceLog = useDeleteEntranceLog();
   const { toast } = useToast();
 
   const handleDeductEntrance = async () => {
@@ -132,6 +133,23 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
         variant: 'destructive',
         title: 'Errore',
         description: 'Impossibile scalare l\'ingresso.',
+      });
+    }
+  };
+
+  const handleDeleteEntrance = async (logId: string) => {
+    try {
+      await deleteEntranceLog.mutateAsync(logId);
+      toast({
+        title: 'Ingresso rimosso!',
+        description: `Ingresso eliminato per ${user.profile.full_name}`,
+      });
+      onUpdate();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: 'Impossibile rimuovere l\'ingresso.',
       });
     }
   };
@@ -221,11 +239,23 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
               ) : (
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {user.logs.slice(0, 5).map((log) => (
-                    <div key={log.id} className="text-sm p-2 bg-muted/50 rounded flex justify-between">
+                    <div key={log.id} className="text-sm p-2 bg-muted/50 rounded flex justify-between items-center">
                       <span>Ingresso</span>
-                      <span className="text-muted-foreground">
-                        {format(new Date(log.entrance_date), 'dd/MM/yy HH:mm')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">
+                          {format(new Date(log.entrance_date), 'dd/MM/yy HH:mm')}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteEntrance(log.id)}
+                          disabled={deleteEntranceLog.isPending}
+                          title="Rimuovi ingresso"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

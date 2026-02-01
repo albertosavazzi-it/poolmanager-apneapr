@@ -231,3 +231,23 @@ export function useAdminRegisterEntrance() {
     },
   });
 }
+
+export function useDeleteEntranceLog() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (logId: string) => {
+      const { error } = await supabase
+        .from('entrance_logs')
+        .delete()
+        .eq('id', logId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users-entrances'] });
+      queryClient.invalidateQueries({ queryKey: ['remaining-entrances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-entrance-logs'] });
+    },
+  });
+}
