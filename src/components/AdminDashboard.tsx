@@ -17,31 +17,34 @@ import { it } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { exportToCSV, PaymentExportRow } from '@/lib/exportUtils';
 import { cn } from '@/lib/utils';
-
-function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSuccess: () => void }) {
+function AddCreditsDialog({
+  user,
+  onSuccess
+}: {
+  user: UserWithEntrances;
+  onSuccess: () => void;
+}) {
   const [entrances, setEntrances] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [open, setOpen] = useState(false);
   const addCredits = useAddCredits();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       await addCredits.mutateAsync({
         userId: user.profile.user_id,
         entrances: parseInt(entrances),
         amount: parseFloat(amount),
-        notes: notes || undefined,
+        notes: notes || undefined
       });
-
       toast({
         title: 'Ingressi aggiunti!',
-        description: `${entrances} ingressi aggiunti a ${user.profile.full_name}`,
+        description: `${entrances} ingressi aggiunti a ${user.profile.full_name}`
       });
-
       setEntrances('');
       setAmount('');
       setNotes('');
@@ -51,13 +54,11 @@ function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSucc
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: 'Impossibile aggiungere gli ingressi.',
+        description: 'Impossibile aggiungere gli ingressi.'
       });
     }
   };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
+  return <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="bg-gradient-primary">
           <Plus className="w-4 h-4 mr-1" /> Aggiungi
@@ -73,106 +74,82 @@ function AddCreditsDialog({ user, onSuccess }: { user: UserWithEntrances; onSucc
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="entrances">Numero ingressi</Label>
-            <Input
-              id="entrances"
-              type="number"
-              min="1"
-              value={entrances}
-              onChange={(e) => setEntrances(e.target.value)}
-              placeholder="10"
-              required
-            />
+            <Input id="entrances" type="number" min="1" value={entrances} onChange={e => setEntrances(e.target.value)} placeholder="10" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Importo versato (€)</Label>
-            <Input
-              id="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="50.00"
-              required
-            />
+            <Input id="amount" type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="50.00" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Note (opzionale)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Es: Abbonamento mensile"
-            />
+            <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Es: Abbonamento mensile" />
           </div>
           <Button type="submit" className="w-full bg-gradient-primary" disabled={addCredits.isPending}>
             {addCredits.isPending ? 'Aggiunta in corso...' : 'Conferma'}
           </Button>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
-
-function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () => void }) {
+function UserCard({
+  user,
+  onUpdate
+}: {
+  user: UserWithEntrances;
+  onUpdate: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const adminRegisterEntrance = useAdminRegisterEntrance();
   const deleteEntranceLog = useDeleteEntranceLog();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleDeductEntrance = async () => {
     try {
       await adminRegisterEntrance.mutateAsync(user.profile.user_id);
       toast({
         title: 'Ingresso scalato!',
-        description: `Ingresso registrato per ${user.profile.full_name}`,
+        description: `Ingresso registrato per ${user.profile.full_name}`
       });
       onUpdate();
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: 'Impossibile scalare l\'ingresso.',
+        description: 'Impossibile scalare l\'ingresso.'
       });
     }
   };
-
   const handleDeleteEntrance = async (logId: string) => {
     try {
       await deleteEntranceLog.mutateAsync(logId);
       toast({
         title: 'Ingresso rimosso!',
-        description: `Ingresso eliminato per ${user.profile.full_name}`,
+        description: `Ingresso eliminato per ${user.profile.full_name}`
       });
       onUpdate();
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: 'Impossibile rimuovere l\'ingresso.',
+        description: 'Impossibile rimuovere l\'ingresso.'
       });
     }
   };
-
-  return (
-    <Card className="shadow-soft animate-fade-in">
+  return <Card className="shadow-soft animate-fade-in">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
               <CardDescription className="mt-1">
-                Registrato il {format(new Date(user.profile.created_at), 'dd MMM yyyy', { locale: it })}
+                Registrato il {format(new Date(user.profile.created_at), 'dd MMM yyyy', {
+                locale: it
+              })}
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleDeductEntrance}
-                disabled={adminRegisterEntrance.isPending}
-                title="Scala ingresso"
-              >
+              <Button size="sm" variant="outline" onClick={handleDeductEntrance} disabled={adminRegisterEntrance.isPending} title="Scala ingresso">
                 <Minus className="w-4 h-4 mr-1" /> Scala
               </Button>
               <AddCreditsDialog user={user} onSuccess={onUpdate} />
@@ -197,11 +174,7 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
 
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full rounded-none border-t">
-            {expanded ? (
-              <>Nascondi dettagli <ChevronUp className="w-4 h-4 ml-2" /></>
-            ) : (
-              <>Mostra dettagli <ChevronDown className="w-4 h-4 ml-2" /></>
-            )}
+            {expanded ? <>Nascondi dettagli <ChevronUp className="w-4 h-4 ml-2" /></> : <>Mostra dettagli <ChevronDown className="w-4 h-4 ml-2" /></>}
           </Button>
         </CollapsibleTrigger>
 
@@ -212,21 +185,15 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
               <h4 className="font-medium mb-2 flex items-center gap-2">
                 <Euro className="w-4 h-4" /> Versamenti
               </h4>
-              {user.credits.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nessun versamento</p>
-              ) : (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {user.credits.map((credit) => (
-                    <div key={credit.id} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
+              {user.credits.length === 0 ? <p className="text-sm text-muted-foreground">Nessun versamento</p> : <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {user.credits.map(credit => <div key={credit.id} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
                       <span>+{credit.entrances_added} ingressi</span>
                       <span className="text-accent font-medium">€{Number(credit.amount_paid).toFixed(2)}</span>
                       <span className="text-muted-foreground">
                         {format(new Date(credit.payment_date), 'dd/MM/yy')}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </div>
 
             {/* Entrance History */}
@@ -234,79 +201,63 @@ function UserCard({ user, onUpdate }: { user: UserWithEntrances; onUpdate: () =>
               <h4 className="font-medium mb-2 flex items-center gap-2">
                 <Ticket className="w-4 h-4" /> Ultimi ingressi
               </h4>
-              {user.logs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nessun ingresso</p>
-              ) : (
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {user.logs.slice(0, 5).map((log) => (
-                    <div key={log.id} className="text-sm p-2 bg-muted/50 rounded flex justify-between items-center">
+              {user.logs.length === 0 ? <p className="text-sm text-muted-foreground">Nessun ingresso</p> : <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {user.logs.slice(0, 5).map(log => <div key={log.id} className="text-sm p-2 bg-muted/50 rounded flex justify-between items-center">
                       <span>Ingresso</span>
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">
                           {format(new Date(log.entrance_date), 'dd/MM/yy HH:mm')}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteEntrance(log.id)}
-                          disabled={deleteEntranceLog.isPending}
-                          title="Rimuovi ingresso"
-                        >
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEntrance(log.id)} disabled={deleteEntranceLog.isPending} title="Rimuovi ingresso">
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
-  );
+    </Card>;
 }
-
 export function AdminDashboard() {
-  const { user, signOut } = useAuth();
-  const { data: users = [], isLoading, refetch } = useAllUsersWithEntrances();
+  const {
+    user,
+    signOut
+  } = useAuth();
+  const {
+    data: users = [],
+    isLoading,
+    refetch
+  } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
   const [showPresentToday, setShowPresentToday] = useState(false);
   const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(undefined);
   const [incomePopoverOpen, setIncomePopoverOpen] = useState(false);
-  const { toast } = useToast();
-
-  const filteredUsers = users.filter((u) =>
-    u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const {
+    toast
+  } = useToast();
+  const filteredUsers = users.filter(u => u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // Utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const usersPresentToday = users.filter((u) =>
-    u.logs.some((log) => {
-      const logDate = new Date(log.entrance_date);
-      logDate.setHours(0, 0, 0, 0);
-      return logDate.getTime() === today.getTime();
-    })
-  );
+  const usersPresentToday = users.filter(u => u.logs.some(log => {
+    const logDate = new Date(log.entrance_date);
+    logDate.setHours(0, 0, 0, 0);
+    return logDate.getTime() === today.getTime();
+  }));
   const presentTodayCount = usersPresentToday.length;
-
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
-  
+
   // Calcola il totale incassato filtrato per data di partenza
   const totalPaid = users.reduce((sum, u) => {
-    const filteredCredits = incomeStartDate
-      ? u.credits.filter((c) => new Date(c.payment_date) >= incomeStartDate)
-      : u.credits;
+    const filteredCredits = incomeStartDate ? u.credits.filter(c => new Date(c.payment_date) >= incomeStartDate) : u.credits;
     return sum + filteredCredits.reduce((cSum, c) => cSum + Number(c.amount_paid), 0);
   }, 0);
-
   const handleExportPayments = () => {
     const allPayments: PaymentExportRow[] = [];
-    
     users.forEach(user => {
       user.credits.forEach(credit => {
         allPayments.push({
@@ -314,34 +265,29 @@ export function AdminDashboard() {
           entrancesAdded: credit.entrances_added,
           amountPaid: Number(credit.amount_paid),
           paymentDate: credit.payment_date,
-          notes: credit.notes,
+          notes: credit.notes
         });
       });
     });
 
     // Sort by date descending
     allPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-
     if (allPayments.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Nessun dato',
-        description: 'Non ci sono versamenti da esportare.',
+        description: 'Non ci sono versamenti da esportare.'
       });
       return;
     }
-
     const dateStr = format(new Date(), 'yyyy-MM-dd');
     exportToCSV(allPayments, `versamenti_${dateStr}`);
-    
     toast({
       title: 'Export completato!',
-      description: `${allPayments.length} versamenti esportati.`,
+      description: `${allPayments.length} versamenti esportati.`
     });
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-gradient-primary shadow-soft">
         <div className="container mx-auto px-4 py-6">
@@ -359,12 +305,7 @@ export function AdminDashboard() {
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
                 Admin
               </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={signOut}
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
+              <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/20">
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -390,31 +331,27 @@ export function AdminDashboard() {
               <DialogHeader>
                 <DialogTitle>Presenti oggi ({presentTodayCount})</DialogTitle>
                 <DialogDescription>
-                  {format(today, 'EEEE d MMMM yyyy', { locale: it })}
+                  {format(today, 'EEEE d MMMM yyyy', {
+                  locale: it
+                })}
                 </DialogDescription>
               </DialogHeader>
-              {usersPresentToday.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato oggi</p>
-              ) : (
-                <div className="space-y-2">
-                  {usersPresentToday.map((u) => (
-                    <div key={u.profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              {usersPresentToday.length === 0 ? <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato oggi</p> : <div className="space-y-2">
+                  {usersPresentToday.map(u => <div key={u.profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                       <span className="font-medium">{u.profile.full_name}</span>
                       <Badge variant="secondary">
-                        {u.logs.filter((log) => {
-                          const logDate = new Date(log.entrance_date);
-                          logDate.setHours(0, 0, 0, 0);
-                          return logDate.getTime() === today.getTime();
-                        }).length} ingress{u.logs.filter((log) => {
-                          const logDate = new Date(log.entrance_date);
-                          logDate.setHours(0, 0, 0, 0);
-                          return logDate.getTime() === today.getTime();
-                        }).length === 1 ? 'o' : 'i'}
+                        {u.logs.filter(log => {
+                    const logDate = new Date(log.entrance_date);
+                    logDate.setHours(0, 0, 0, 0);
+                    return logDate.getTime() === today.getTime();
+                  }).length} ingress{u.logs.filter(log => {
+                    const logDate = new Date(log.entrance_date);
+                    logDate.setHours(0, 0, 0, 0);
+                    return logDate.getTime() === today.getTime();
+                  }).length === 1 ? 'o' : 'i'}
                       </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </DialogContent>
           </Dialog>
           <Card className="shadow-soft">
@@ -438,11 +375,9 @@ export function AdminDashboard() {
                   <Euro className="w-8 h-8 mx-auto text-success mb-2" />
                   <p className="text-2xl font-bold">€{totalPaid.toFixed(0)}</p>
                   <p className="text-sm text-muted-foreground">Totale incassato</p>
-                  {incomeStartDate && (
-                    <p className="text-xs text-primary mt-1">
+                  {incomeStartDate && <p className="text-xs text-primary mt-1">
                       dal {format(incomeStartDate, 'dd/MM/yyyy')}
-                    </p>
-                  )}
+                    </p>}
                 </CardContent>
               </Card>
             </PopoverTrigger>
@@ -450,33 +385,18 @@ export function AdminDashboard() {
               <div className="p-3 border-b">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">Filtra da data</p>
-                  {incomeStartDate && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setIncomeStartDate(undefined);
-                        setIncomePopoverOpen(false);
-                      }}
-                      className="h-7 px-2 text-muted-foreground"
-                    >
+                  {incomeStartDate && <Button variant="ghost" size="sm" onClick={() => {
+                  setIncomeStartDate(undefined);
+                  setIncomePopoverOpen(false);
+                }} className="h-7 px-2 text-muted-foreground">
                       <X className="w-3 h-3 mr-1" /> Rimuovi
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </div>
-              <Calendar
-                mode="single"
-                selected={incomeStartDate}
-                onSelect={(date) => {
-                  setIncomeStartDate(date);
-                  setIncomePopoverOpen(false);
-                }}
-                disabled={(date) => date > new Date()}
-                initialFocus
-                locale={it}
-                className={cn("p-3 pointer-events-auto")}
-              />
+              <Calendar mode="single" selected={incomeStartDate} onSelect={date => {
+              setIncomeStartDate(date);
+              setIncomePopoverOpen(false);
+            }} disabled={date => date > new Date()} initialFocus locale={it} className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
         </div>
@@ -485,12 +405,7 @@ export function AdminDashboard() {
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca utente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+            <Input placeholder="Cerca utente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
           <Button onClick={handleExportPayments} variant="outline" className="shrink-0">
             <Download className="w-4 h-4 mr-2" /> Esporta CSV
@@ -499,21 +414,12 @@ export function AdminDashboard() {
 
         {/* Users List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-display">Gestione Utenti</h2>
+          <h2 className="text-xl font-sans">Gestione Utenti</h2>
 
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Caricamento...</div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredUsers.map((u) => (
-                <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} />
-              ))}
-            </div>
-          )}
+          {isLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento...</div> : filteredUsers.length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div> : <div className="grid gap-4 md:grid-cols-2">
+              {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} />)}
+            </div>}
         </div>
       </main>
-    </div>
-  );
+    </div>;
 }
