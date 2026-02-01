@@ -297,7 +297,7 @@ export function AdminDashboard() {
                 <Waves className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-display text-primary-foreground">Pool Manager</h1>
+                <h1 className="text-xl text-primary-foreground font-serif">Pool Manager</h1>
                 <p className="text-primary-foreground/80 text-sm">Pannello Admin</p>
               </div>
             </div>
