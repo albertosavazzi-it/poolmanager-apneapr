@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, UserWithEntrances } from '@/hooks/useEntrances';
+import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -101,6 +102,7 @@ function UserCard({
   const [expanded, setExpanded] = useState(false);
   const adminRegisterEntrance = useAdminRegisterEntrance();
   const deleteEntranceLog = useDeleteEntranceLog();
+  const toggleUserHidden = useToggleUserHidden();
   const {
     toast
   } = useToast();
@@ -136,12 +138,38 @@ function UserCard({
       });
     }
   };
-  return <Card className="shadow-soft animate-fade-in">
+  const handleToggleHidden = async () => {
+    try {
+      await toggleUserHidden.mutateAsync({
+        profileId: user.profile.id,
+        isHidden: !user.profile.is_hidden
+      });
+      toast({
+        title: user.profile.is_hidden ? 'Utente visibile!' : 'Utente nascosto!',
+        description: `${user.profile.full_name} è ora ${user.profile.is_hidden ? 'visibile' : 'nascosto'}`
+      });
+      onUpdate();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: 'Impossibile modificare la visibilità.'
+      });
+    }
+  };
+  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60")}>
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
+                {user.profile.is_hidden && (
+                  <Badge variant="secondary" className="text-xs">
+                    <EyeOff className="w-3 h-3 mr-1" /> Nascosto
+                  </Badge>
+                )}
+              </div>
               <CardDescription className="mt-1">
                 Registrato il {format(new Date(user.profile.created_at), 'dd MMM yyyy', {
                 locale: it
@@ -215,6 +243,26 @@ function UserCard({
                     </div>)}
                 </div>}
             </div>
+
+            {/* Visibility Toggle */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {user.profile.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+                  <span className="text-sm font-medium">Visibilità utente</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {user.profile.is_hidden ? 'Nascosto' : 'Visibile'}
+                  </span>
+                  <Switch
+                    checked={!user.profile.is_hidden}
+                    onCheckedChange={handleToggleHidden}
+                    disabled={toggleUserHidden.isPending}
+                  />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
@@ -232,12 +280,19 @@ export function AdminDashboard() {
   } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
   const [showPresentToday, setShowPresentToday] = useState(false);
+  const [showHiddenUsers, setShowHiddenUsers] = useState(false);
   const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(undefined);
   const [incomePopoverOpen, setIncomePopoverOpen] = useState(false);
   const {
     toast
   } = useToast();
-  const filteredUsers = users.filter(u => u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  // Filtra utenti per ricerca e visibilità
+  const filteredUsers = users
+    .filter(u => u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(u => showHiddenUsers || !u.profile.is_hidden);
+  
+  const hiddenUsersCount = users.filter(u => u.profile.is_hidden).length;
 
   // Utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
   const today = new Date();
@@ -414,7 +469,20 @@ export function AdminDashboard() {
 
         {/* Users List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-sans">Gestione Utenti</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-sans">Gestione Utenti</h2>
+            {hiddenUsersCount > 0 && (
+              <Button 
+                variant={showHiddenUsers ? "secondary" : "ghost"} 
+                size="sm"
+                onClick={() => setShowHiddenUsers(!showHiddenUsers)}
+                className="gap-2"
+              >
+                {showHiddenUsers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {showHiddenUsers ? 'Nascondi archiviati' : `Mostra nascosti (${hiddenUsersCount})`}
+              </Button>
+            )}
+          </div>
 
           {isLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento...</div> : filteredUsers.length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div> : <div className="grid gap-4 md:grid-cols-2">
               {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} />)}

@@ -26,6 +26,7 @@ export interface UserProfile {
   full_name: string;
   created_at: string;
   updated_at: string;
+  is_hidden: boolean;
 }
 
 export interface UserWithEntrances {
@@ -248,6 +249,24 @@ export function useDeleteEntranceLog() {
       queryClient.invalidateQueries({ queryKey: ['all-users-entrances'] });
       queryClient.invalidateQueries({ queryKey: ['remaining-entrances'] });
       queryClient.invalidateQueries({ queryKey: ['my-entrance-logs'] });
+    },
+  });
+}
+
+export function useToggleUserHidden() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ profileId, isHidden }: { profileId: string; isHidden: boolean }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_hidden: isHidden })
+        .eq('id', profileId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users-entrances'] });
     },
   });
 }
