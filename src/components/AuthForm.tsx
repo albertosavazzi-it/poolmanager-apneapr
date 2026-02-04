@@ -59,6 +59,15 @@ export function AuthForm() {
         title: 'Registrazione completata!',
         description: 'Benvenuto nella nostra piscina.',
       });
+
+      // Notify admins about new registration
+      try {
+        await supabase.functions.invoke('notify-admin-new-user', {
+          body: { userEmail: email, userName: fullName }
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify admins:', notifyError);
+      }
     }
 
     setIsLoading(false);
