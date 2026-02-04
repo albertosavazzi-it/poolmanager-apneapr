@@ -1,17 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Waves, Download, X } from 'lucide-react';
+import { Waves, Download, X, Share } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// Detect iOS Safari
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
+const isInStandaloneMode = () => {
+  return window.matchMedia('(display-mode: standalone)').matches || 
+         (window.navigator as any).standalone === true;
+};
+
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
 
   useEffect(() => {
     // Check if already dismissed in this session
@@ -21,6 +32,20 @@ export function InstallPrompt() {
       return;
     }
 
+    // Check if already installed
+    if (isInStandaloneMode()) {
+      setShowPrompt(false);
+      return;
+    }
+
+    // Check if iOS
+    if (isIOS()) {
+      setIsIOSDevice(true);
+      setShowPrompt(true);
+      return;
+    }
+
+    // For other browsers that support beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -28,11 +53,6 @@ export function InstallPrompt() {
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-
-    // Check if running as standalone (already installed)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowPrompt(false);
-    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
@@ -86,24 +106,50 @@ export function InstallPrompt() {
           </div>
         </CardHeader>
         <CardContent className="pt-2">
-          <p className="text-sm text-muted-foreground mb-3">
-            Installa l'app per accedere rapidamente e usarla anche offline.
-          </p>
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleInstall} 
-              className="flex-1 bg-gradient-primary"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Installa
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleDismiss}
-            >
-              Non ora
-            </Button>
-          </div>
+          {isIOSDevice ? (
+            <>
+              <p className="text-sm text-muted-foreground mb-3">
+                Per installare l'app su iOS:
+              </p>
+              <ol className="text-sm text-muted-foreground mb-4 space-y-2 list-decimal list-inside">
+                <li className="flex items-start gap-2">
+                  <span>Tocca l'icona</span>
+                  <Share className="w-4 h-4 inline text-primary flex-shrink-0 mt-0.5" />
+                  <span>in basso</span>
+                </li>
+                <li>Scorri e tocca <strong>"Aggiungi a Home"</strong></li>
+                <li>Conferma toccando <strong>"Aggiungi"</strong></li>
+              </ol>
+              <Button 
+                variant="outline" 
+                onClick={handleDismiss}
+                className="w-full"
+              >
+                Ho capito
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground mb-3">
+                Installa l'app per accedere rapidamente e usarla anche offline.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleInstall} 
+                  className="flex-1 bg-gradient-primary"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Installa
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDismiss}
+                >
+                  Non ora
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
