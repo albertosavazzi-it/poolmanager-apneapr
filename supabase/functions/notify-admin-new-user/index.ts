@@ -17,9 +17,49 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Dynamic import for Resend
-    const { Resend } = await import("https://esm.sh/resend@2.0.0");
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    // Validate JWT token - require authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid authorization header' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    
+    // Create client with user's JWT to verify authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify the JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getUser(token);
+    
+    if (claimsError || !claimsData?.user) {
+      console.error("JWT validation failed:", claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const authenticatedUser = claimsData.user;
+    
+    // Verify this is a newly created user (within 5 minutes)
+    const userCreatedAt = new Date(authenticatedUser.created_at!);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
+    
+    if (diffMinutes > 5) {
+      console.log(`User ${authenticatedUser.id} created ${diffMinutes.toFixed(1)} minutes ago - rejecting`);
+      return new Response(
+        JSON.stringify({ error: 'This function can only be called during signup' }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     const { userEmail, userName }: NewUserNotification = await req.json();
 
@@ -27,8 +67,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: userEmail and userName");
     }
 
+    // Verify the email matches the authenticated user
+    if (userEmail !== authenticatedUser.email) {
+      return new Response(
+        JSON.stringify({ error: 'Email mismatch - can only notify for your own registration' }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Dynamic import for Resend
+    const { Resend } = await import("https://esm.sh/resend@2.0.0");
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
     // Create Supabase client with service role to query admin emails
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -73,7 +124,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending notification to ${adminEmails.length} admin(s)`);
+    console.log(`Sending notification to ${adminEmails.length} admin(s) for new user: ${userEmail}`);
 
     // Send email to all admins
     const emailResponse = await resend.emails.send({
