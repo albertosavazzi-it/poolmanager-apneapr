@@ -9,6 +9,16 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export function UserDashboard() {
   const { user, signOut, isAdmin } = useAuth();
@@ -19,6 +29,7 @@ export function UserDashboard() {
   const { toast } = useToast();
   const [showHistory, setShowHistory] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleRegisterEntrance = async () => {
     try {
@@ -87,12 +98,34 @@ export function UserDashboard() {
           </div>
           <CardContent className="p-6">
             <Button
-              onClick={handleRegisterEntrance}
+              onClick={() => setShowConfirmDialog(true)}
               disabled={registerEntrance.isPending}
               className="w-full h-14 text-lg bg-gradient-primary shadow-soft hover:shadow-elevated transition-all"
             >
               {registerEntrance.isPending ? 'Registrazione...' : '🏊‍♂️ Registra Ingresso'}
             </Button>
+            
+            <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Conferma ingresso</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Stai per registrare un ingresso in piscina. 
+                    {remainingEntrances <= 0 && (
+                      <span className="block mt-2 text-destructive font-medium">
+                        ⚠️ Attenzione: il tuo saldo andrà in negativo!
+                      </span>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRegisterEntrance}>
+                    Conferma
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             {remainingEntrances < 0 && (
               <p className="text-center text-destructive mt-3 text-sm font-medium">
                 ⚠️ Attenzione: hai {Math.abs(remainingEntrances)} ingress{Math.abs(remainingEntrances) === 1 ? 'o' : 'i'} in debito. Contatta l'amministratore.
