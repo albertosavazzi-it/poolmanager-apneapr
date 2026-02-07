@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
@@ -282,10 +282,27 @@ export function AdminDashboard() {
   const [showPresentToday, setShowPresentToday] = useState(false);
   const [showHiddenUsers, setShowHiddenUsers] = useState(false);
   const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(() => {
-    const saved = localStorage.getItem('incomeStartDate');
-    return saved ? new Date(saved) : undefined;
+    try {
+      const saved = localStorage.getItem('incomeStartDate');
+      if (saved) {
+        const date = new Date(saved);
+        if (!isNaN(date.getTime())) return date;
+      }
+    } catch (e) {
+      console.error('Errore lettura incomeStartDate da localStorage', e);
+    }
+    return undefined;
   });
   const [incomePopoverOpen, setIncomePopoverOpen] = useState(false);
+
+  // Sincronizza incomeStartDate con localStorage ad ogni cambio
+  useEffect(() => {
+    if (incomeStartDate) {
+      localStorage.setItem('incomeStartDate', incomeStartDate.toISOString());
+    } else {
+      localStorage.removeItem('incomeStartDate');
+    }
+  }, [incomeStartDate]);
   const {
     toast
   } = useToast();
@@ -445,7 +462,6 @@ export function AdminDashboard() {
                   <p className="text-sm font-medium">Filtra da data</p>
                   {incomeStartDate && <Button variant="ghost" size="sm" onClick={() => {
                   setIncomeStartDate(undefined);
-                  localStorage.removeItem('incomeStartDate');
                   setIncomePopoverOpen(false);
                 }} className="h-7 px-2 text-muted-foreground">
                       <X className="w-3 h-3 mr-1" /> Rimuovi
@@ -454,11 +470,6 @@ export function AdminDashboard() {
               </div>
             <Calendar mode="single" selected={incomeStartDate} onSelect={date => {
               setIncomeStartDate(date);
-              if (date) {
-                localStorage.setItem('incomeStartDate', date.toISOString());
-              } else {
-                localStorage.removeItem('incomeStartDate');
-              }
               setIncomePopoverOpen(false);
             }} disabled={date => date > new Date()} initialFocus locale={it} className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
