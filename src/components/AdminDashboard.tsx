@@ -284,9 +284,13 @@ export function AdminDashboard() {
   const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(() => {
     try {
       const saved = localStorage.getItem('incomeStartDate');
+      console.log('[AdminDashboard] Init incomeStartDate from localStorage:', saved);
       if (saved) {
         const date = new Date(saved);
-        if (!isNaN(date.getTime())) return date;
+        if (!isNaN(date.getTime())) {
+          console.log('[AdminDashboard] Restored date:', date.toISOString());
+          return date;
+        }
       }
     } catch (e) {
       console.error('Errore lettura incomeStartDate da localStorage', e);
@@ -297,8 +301,10 @@ export function AdminDashboard() {
 
   // Sincronizza incomeStartDate con localStorage ad ogni cambio
   useEffect(() => {
+    console.log('[AdminDashboard] incomeStartDate changed:', incomeStartDate?.toISOString() ?? 'undefined');
     if (incomeStartDate) {
       localStorage.setItem('incomeStartDate', incomeStartDate.toISOString());
+      console.log('[AdminDashboard] Saved to localStorage:', localStorage.getItem('incomeStartDate'));
     } else {
       localStorage.removeItem('incomeStartDate');
     }
