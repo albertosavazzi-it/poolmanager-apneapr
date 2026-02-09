@@ -38,11 +38,11 @@ export function UserDashboard() {
         title: 'Ingresso registrato!',
         description: 'Buon allenamento! 🏊‍♂️',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: 'Impossibile registrare l\'ingresso.',
+        description: error?.message || 'Impossibile registrare l\'ingresso.',
       });
     }
   };
