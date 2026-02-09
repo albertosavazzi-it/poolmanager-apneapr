@@ -231,28 +231,27 @@ export function useAddCredits() {
   });
 }
 
+export async function checkEntranceToday(userId: string): Promise<boolean> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const { data: existing } = await supabase
+    .from('entrance_logs')
+    .select('id')
+    .eq('user_id', userId)
+    .gte('entrance_date', today.toISOString())
+    .lt('entrance_date', tomorrow.toISOString());
+
+  return !!(existing && existing.length > 0);
+}
+
 export function useAdminRegisterEntrance() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      // Check if user already has an entrance today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data: existing } = await supabase
-        .from('entrance_logs')
-        .select('id')
-        .eq('user_id', userId)
-        .gte('entrance_date', today.toISOString())
-        .lt('entrance_date', tomorrow.toISOString());
-
-      if (existing && existing.length > 0) {
-        throw new Error('Questo utente ha già un ingresso registrato oggi.');
-      }
-
       const { error } = await supabase
         .from('entrance_logs')
         .insert({ user_id: userId });
