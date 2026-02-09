@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, UserWithEntrances } from '@/hooks/useEntrances';
+import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, checkEntranceToday, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
@@ -106,19 +107,44 @@ function UserCard({
   const {
     toast
   } = useToast();
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+
   const handleDeductEntrance = async () => {
+    try {
+      const alreadyToday = await checkEntranceToday(user.profile.user_id);
+      if (alreadyToday) {
+        setShowDuplicateWarning(true);
+        return;
+      }
+      await adminRegisterEntrance.mutateAsync(user.profile.user_id);
+      toast({
+        title: 'Ingresso scalato!',
+        description: `Ingresso registrato per ${user.profile.full_name}`,
+      });
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: error?.message || 'Impossibile scalare l\'ingresso.',
+      });
+    }
+  };
+
+  const handleForceDeductEntrance = async () => {
+    setShowDuplicateWarning(false);
     try {
       await adminRegisterEntrance.mutateAsync(user.profile.user_id);
       toast({
         title: 'Ingresso scalato!',
-        description: `Ingresso registrato per ${user.profile.full_name}`
+        description: `Ingresso registrato per ${user.profile.full_name}`,
       });
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: 'Impossibile scalare l\'ingresso.'
+        description: error?.message || 'Impossibile scalare l\'ingresso.',
       });
     }
   };
@@ -266,6 +292,23 @@ function UserCard({
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ingresso già registrato</AlertDialogTitle>
+            <AlertDialogDescription>
+              {user.profile.full_name} ha già un ingresso registrato oggi. Vuoi scalarne un altro comunque?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceDeductEntrance}>
+              Scala comunque
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>;
 }
 export function AdminDashboard() {
