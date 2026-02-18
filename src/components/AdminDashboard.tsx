@@ -451,6 +451,9 @@ export function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-primary-foreground/90 text-sm hidden sm:inline">
+                {user?.user_metadata?.full_name || user?.email}
+              </span>
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
                 Admin
               </Badge>
