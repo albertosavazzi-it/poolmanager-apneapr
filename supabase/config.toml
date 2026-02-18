@@ -1,1 +1,4 @@
 project_id = "cqyobvawdxsfiudzhtdp"
+
+[functions.notify-admin-new-user]
+verify_jwt = false

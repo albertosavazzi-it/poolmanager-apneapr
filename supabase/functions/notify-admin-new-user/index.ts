@@ -17,73 +17,45 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Validate JWT token - require authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization header' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
-    
-    // Create client with user's JWT to verify authentication
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getUser(token);
-    
-    if (claimsError || !claimsData?.user) {
-      console.error("JWT validation failed:", claimsError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const authenticatedUser = claimsData.user;
-    
-    // Verify this is a newly created user (within 5 minutes)
-    const userCreatedAt = new Date(authenticatedUser.created_at!);
-    const now = new Date();
-    const diffMinutes = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
-    
-    if (diffMinutes > 5) {
-      console.log(`User ${authenticatedUser.id} created ${diffMinutes.toFixed(1)} minutes ago - rejecting`);
-      return new Response(
-        JSON.stringify({ error: 'This function can only be called during signup' }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
     const { userEmail, userName }: NewUserNotification = await req.json();
 
     if (!userEmail || !userName) {
       throw new Error("Missing required fields: userEmail and userName");
     }
 
-    // Verify the email matches the authenticated user
-    if (userEmail !== authenticatedUser.email) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user exists and was recently created (within 10 minutes)
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+    if (usersError) {
+      console.error("Error listing users:", usersError);
+      throw new Error("Failed to verify user");
+    }
+
+    const matchingUser = usersData.users.find((u) => u.email === userEmail);
+    if (!matchingUser) {
+      console.log(`User with email ${userEmail} not found`);
       return new Response(
-        JSON.stringify({ error: 'Email mismatch - can only notify for your own registration' }),
+        JSON.stringify({ error: "User not found" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userCreatedAt = new Date(matchingUser.created_at!);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
+
+    if (diffMinutes > 10) {
+      console.log(`User ${userEmail} created ${diffMinutes.toFixed(1)} minutes ago - rejecting`);
+      return new Response(
+        JSON.stringify({ error: "This function can only be called during signup" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Dynamic import for Resend
-    const { Resend } = await import("https://esm.sh/resend@2.0.0");
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-    // Create Supabase client with service role to query admin emails
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get all admin user IDs
+    // Get admin user IDs
     const { data: adminRoles, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -102,19 +74,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get admin emails from auth.users
     const adminUserIds = adminRoles.map((r: { user_id: string }) => r.user_id);
-    const { data: adminUsers, error: usersError } = await supabase.auth.admin.listUsers();
-
-    if (usersError) {
-      console.error("Error fetching admin users:", usersError);
-      throw new Error("Failed to fetch admin user details");
-    }
-
-    const adminEmails = adminUsers.users
-      .filter((user: { id: string }) => adminUserIds.includes(user.id))
-      .map((user: { email?: string }) => user.email)
-      .filter((email: string | undefined): email is string => !!email);
+    const adminEmails = usersData.users
+      .filter((user) => adminUserIds.includes(user.id))
+      .map((user) => user.email)
+      .filter((email): email is string => !!email);
 
     if (adminEmails.length === 0) {
       console.log("No admin emails found");
@@ -126,7 +90,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     console.log(`Sending notification to ${adminEmails.length} admin(s) for new user: ${userEmail}`);
 
-    // Send email to all admins
+    const { Resend } = await import("https://esm.sh/resend@2.0.0");
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
     const emailResponse = await resend.emails.send({
       from: "Pool Manager <noreply@apneapr.it>",
       to: adminEmails,
