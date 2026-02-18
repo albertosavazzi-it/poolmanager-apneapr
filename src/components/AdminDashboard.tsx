@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { exportToCSV, PaymentExportRow } from '@/lib/exportUtils';
+import { exportToCSV, PaymentExportRow, exportUserSummaryToCSV, UserSummaryExportRow } from '@/lib/exportUtils';
 import { cn } from '@/lib/utils';
 function AddCreditsDialog({
   user,
@@ -407,6 +407,35 @@ export function AdminDashboard() {
       description: `${allPayments.length} versamenti esportati.`
     });
   };
+
+  const handleExportUserSummary = () => {
+    const summaryData: UserSummaryExportRow[] = users
+      .filter(u => !u.profile.is_hidden)
+      .map(u => ({
+        userName: u.profile.full_name,
+        totalEntrances: u.totalEntrances,
+        usedEntrances: u.usedEntrances,
+        remainingEntrances: u.remainingEntrances,
+        totalPaid: u.totalPaid,
+      }))
+      .sort((a, b) => a.userName.localeCompare(b.userName));
+
+    if (summaryData.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nessun dato',
+        description: 'Non ci sono utenti da esportare.',
+      });
+      return;
+    }
+
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    exportUserSummaryToCSV(summaryData, `situazione_utenti_${dateStr}`);
+    toast({
+      title: 'Export completato!',
+      description: `Situazione di ${summaryData.length} utenti esportata.`,
+    });
+  };
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-gradient-primary shadow-soft">
@@ -552,7 +581,10 @@ export function AdminDashboard() {
             <Input placeholder="Cerca utente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
           <Button onClick={handleExportPayments} variant="outline" className="shrink-0">
-            <Download className="w-4 h-4 mr-2" /> Esporta CSV
+            <Download className="w-4 h-4 mr-2" /> Versamenti
+          </Button>
+          <Button onClick={handleExportUserSummary} variant="outline" className="shrink-0">
+            <Download className="w-4 h-4 mr-2" /> Situazione
           </Button>
         </div>
 

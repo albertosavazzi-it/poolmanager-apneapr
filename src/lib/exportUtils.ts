@@ -9,6 +9,28 @@ export interface PaymentExportRow {
   notes: string | null;
 }
 
+export interface UserSummaryExportRow {
+  userName: string;
+  totalEntrances: number;
+  usedEntrances: number;
+  remainingEntrances: number;
+  totalPaid: number;
+}
+
+function downloadCSV(csvContent: string, filename: string) {
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function exportToCSV(data: PaymentExportRow[], filename: string) {
   const headers = ['Nome Utente', 'Ingressi Aggiunti', 'Importo Versato (€)', 'Data Pagamento', 'Note'];
   
@@ -23,17 +45,22 @@ export function exportToCSV(data: PaymentExportRow[], filename: string) {
     ].join(';'))
   ].join('\n');
 
-  // Add BOM for Excel UTF-8 compatibility
-  const BOM = '\uFEFF';
-  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  downloadCSV(csvContent, filename);
+}
+
+export function exportUserSummaryToCSV(data: UserSummaryExportRow[], filename: string) {
+  const headers = ['Nome Utente', 'Ingressi Totali', 'Ingressi Utilizzati', 'Ingressi Rimanenti', 'Totale Versato (€)'];
   
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const csvContent = [
+    headers.join(';'),
+    ...data.map(row => [
+      `"${row.userName}"`,
+      row.totalEntrances,
+      row.usedEntrances,
+      row.remainingEntrances,
+      row.totalPaid.toFixed(2).replace('.', ','),
+    ].join(';'))
+  ].join('\n');
+
+  downloadCSV(csvContent, filename);
 }
