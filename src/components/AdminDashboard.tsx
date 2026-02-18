@@ -323,6 +323,8 @@ export function AdminDashboard() {
   } = useAllUsersWithEntrances();
   const [searchTerm, setSearchTerm] = useState('');
   const [showPresentToday, setShowPresentToday] = useState(false);
+  const [presentDate, setPresentDate] = useState<Date>(new Date());
+  const [showPresentDatePicker, setShowPresentDatePicker] = useState(false);
   const [showHiddenUsers, setShowHiddenUsers] = useState(false);
   const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(() => {
     try {
@@ -356,15 +358,16 @@ export function AdminDashboard() {
   
   const hiddenUsersCount = users.filter(u => u.profile.is_hidden).length;
 
-  // Utenti presenti oggi (che hanno almeno un ingresso registrato oggi)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const usersPresentToday = users.filter(u => u.logs.some(log => {
+  // Utenti presenti nella data selezionata
+  const selectedDay = new Date(presentDate);
+  selectedDay.setHours(0, 0, 0, 0);
+  const isToday = selectedDay.getTime() === (() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime(); })();
+  const usersPresentOnDate = users.filter(u => u.logs.some(log => {
     const logDate = new Date(log.entrance_date);
     logDate.setHours(0, 0, 0, 0);
-    return logDate.getTime() === today.getTime();
+    return logDate.getTime() === selectedDay.getTime();
   }));
-  const presentTodayCount = usersPresentToday.length;
+  const presentCount = usersPresentOnDate.length;
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
 
@@ -434,37 +437,61 @@ export function AdminDashboard() {
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Dialog open={showPresentToday} onOpenChange={setShowPresentToday}>
+          <Dialog open={showPresentToday} onOpenChange={(open) => {
+              setShowPresentToday(open);
+              if (open) setPresentDate(new Date());
+            }}>
             <DialogTrigger asChild>
               <Card className="shadow-soft cursor-pointer hover:shadow-elevated transition-shadow">
                 <CardContent className="p-4 text-center">
                   <Users className="w-8 h-8 mx-auto text-primary mb-2" />
-                  <p className="text-2xl font-bold">{presentTodayCount}</p>
+                  <p className="text-2xl font-bold">{presentCount}</p>
                   <p className="text-sm text-muted-foreground">Presenti oggi</p>
                 </CardContent>
               </Card>
             </DialogTrigger>
             <DialogContent className="max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Presenti oggi ({presentTodayCount})</DialogTitle>
+                <DialogTitle>
+                  {isToday ? `Presenti oggi (${presentCount})` : `Presenti il ${format(selectedDay, 'd MMMM yyyy', { locale: it })} (${presentCount})`}
+                </DialogTitle>
                 <DialogDescription>
-                  {format(today, 'EEEE d MMMM yyyy', {
-                  locale: it
-                })}
+                  <Popover open={showPresentDatePicker} onOpenChange={setShowPresentDatePicker}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="mt-2 gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        {format(presentDate, 'EEEE d MMMM yyyy', { locale: it })}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={presentDate}
+                        onSelect={(date) => {
+                          if (date) setPresentDate(date);
+                          setShowPresentDatePicker(false);
+                        }}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                        locale={it}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </DialogDescription>
               </DialogHeader>
-              {usersPresentToday.length === 0 ? <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato oggi</p> : <div className="space-y-2">
-                  {usersPresentToday.map(u => <div key={u.profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              {usersPresentOnDate.length === 0 ? <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato{isToday ? ' oggi' : ' in questa data'}</p> : <div className="space-y-2">
+                  {usersPresentOnDate.map(u => <div key={u.profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                       <span className="font-medium">{u.profile.full_name}</span>
                       <Badge variant="secondary">
                         {u.logs.filter(log => {
                     const logDate = new Date(log.entrance_date);
                     logDate.setHours(0, 0, 0, 0);
-                    return logDate.getTime() === today.getTime();
+                    return logDate.getTime() === selectedDay.getTime();
                   }).length} ingress{u.logs.filter(log => {
                     const logDate = new Date(log.entrance_date);
                     logDate.setHours(0, 0, 0, 0);
-                    return logDate.getTime() === today.getTime();
+                    return logDate.getTime() === selectedDay.getTime();
                   }).length === 1 ? 'o' : 'i'}
                       </Badge>
                     </div>)}
