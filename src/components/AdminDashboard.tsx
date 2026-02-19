@@ -185,7 +185,7 @@ function UserCard({
       });
     }
   };
-  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60", isPresentToday && "ring-2 ring-primary/50 bg-primary/5")}>
+  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60", isPresentToday && "ring-2 ring-accent border-accent shadow-[0_0_12px_hsl(var(--accent)/0.3)]")}>
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -193,8 +193,8 @@ function UserCard({
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
                 {isPresentToday && (
-                  <Badge className="text-xs bg-primary/20 text-primary border-primary/30">
-                    Presente
+                  <Badge className="text-xs bg-accent text-accent-foreground border-0">
+                    ✓ Presente
                   </Badge>
                 )}
                 {user.profile.is_hidden && (
