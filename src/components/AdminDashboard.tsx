@@ -95,10 +95,12 @@ function AddCreditsDialog({
 }
 function UserCard({
   user,
-  onUpdate
+  onUpdate,
+  isPresentToday
 }: {
   user: UserWithEntrances;
   onUpdate: () => void;
+  isPresentToday: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const adminRegisterEntrance = useAdminRegisterEntrance();
@@ -183,13 +185,18 @@ function UserCard({
       });
     }
   };
-  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60")}>
+  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60", isPresentToday && "ring-2 ring-primary/50 bg-primary/5")}>
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
+                {isPresentToday && (
+                  <Badge className="text-xs bg-primary/20 text-primary border-primary/30">
+                    Presente
+                  </Badge>
+                )}
                 {user.profile.is_hidden && (
                   <Badge variant="secondary" className="text-xs">
                     <EyeOff className="w-3 h-3 mr-1" /> Nascosto
@@ -609,7 +616,7 @@ export function AdminDashboard() {
           </div>
 
           {isLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento...</div> : filteredUsers.length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div> : <div className="grid gap-4 md:grid-cols-2">
-              {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} />)}
+              {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} isPresentToday={usersPresentOnDate.some(p => p.profile.id === u.profile.id)} />)}
             </div>}
         </div>
       </main>
