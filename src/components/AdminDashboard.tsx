@@ -595,19 +595,51 @@ export function AdminDashboard() {
 
         {/* Users List */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-sans">Gestione Utenti</h2>
-            {hiddenUsersCount > 0 && (
-              <Button 
-                variant={showHiddenUsers ? "secondary" : "ghost"} 
-                size="sm"
-                onClick={() => setShowHiddenUsers(!showHiddenUsers)}
-                className="gap-2"
-              >
-                {showHiddenUsers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                {showHiddenUsers ? 'Nascondi archiviati' : `Mostra nascosti (${hiddenUsersCount})`}
-              </Button>
-            )}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-sans">Gestione Utenti</h2>
+              {hiddenUsersCount > 0 && (
+                <Button 
+                  variant={showHiddenUsers ? "secondary" : "ghost"} 
+                  size="sm"
+                  onClick={() => setShowHiddenUsers(!showHiddenUsers)}
+                  className="gap-2"
+                >
+                  {showHiddenUsers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {showHiddenUsers ? 'Nascondi archiviati' : `Mostra nascosti (${hiddenUsersCount})`}
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Presenti il:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {isToday ? 'Oggi' : format(presentDate, 'd MMM yyyy', { locale: it })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={presentDate}
+                    onSelect={(date) => {
+                      if (date) setPresentDate(date);
+                    }}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                    locale={it}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {!isToday && (
+                <Button variant="ghost" size="sm" onClick={() => setPresentDate(new Date())} className="text-xs text-muted-foreground">
+                  Torna a oggi
+                </Button>
+              )}
+              <Badge variant="secondary" className="ml-auto">{presentCount} presenti</Badge>
+            </div>
           </div>
 
           {isLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento...</div> : filteredUsers.length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div> : <div className="grid gap-4 md:grid-cols-2">
