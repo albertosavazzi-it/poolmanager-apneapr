@@ -3,7 +3,7 @@ import { useRemainingEntrances, useMyEntranceLogs, useMyCredits, useRegisterEntr
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Waves, LogOut, Ticket, Calendar, Euro, ChevronDown, ChevronUp, DoorOpen } from 'lucide-react';
+import { Waves, LogOut, Ticket, Calendar, Euro, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
