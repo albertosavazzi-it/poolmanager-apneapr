@@ -49,6 +49,11 @@ export function UserDashboard() {
 
   const totalPaid = credits.reduce((sum, c) => sum + Number(c.amount_paid), 0);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const hasEnteredToday = entranceLogs.some(
+    (log) => log.entrance_date.slice(0, 10) === today
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -96,7 +101,13 @@ export function UserDashboard() {
             </h2>
             <p className={`text-lg ${remainingEntrances < 0 ? 'text-destructive-foreground/80' : 'text-primary-foreground/80'}`}>Ingressi rimanenti</p>
           </div>
-          <CardContent className="p-6">
+          <CardContent className="p-6 space-y-3">
+            {hasEnteredToday ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/15 border border-accent text-accent-foreground">
+                <span className="text-xl">✅</span>
+                <p className="text-sm font-medium">Ingresso registrato oggi</p>
+              </div>
+            ) : null}
             <Button
               onClick={() => setShowConfirmDialog(true)}
               disabled={registerEntrance.isPending}
