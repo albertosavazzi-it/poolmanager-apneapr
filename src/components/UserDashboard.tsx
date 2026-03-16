@@ -104,7 +104,7 @@ export function UserDashboard() {
           <CardContent className="p-6 space-y-3">
             {hasEnteredToday ?
             <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/15 border border-accent text-accent-foreground">
-                <span className="text-xl">✅</span>
+                <span className="text-xl">​✅</span>
                 <p className="text-sm font-medium text-secondary-foreground">Ingresso registrato oggi</p>
               </div> :
             null}
