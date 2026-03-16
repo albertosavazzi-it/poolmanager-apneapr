@@ -17,8 +17,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTitle } from
+'@/components/ui/alert-dialog';
 
 export function UserDashboard() {
   const { user, signOut, isAdmin } = useAuth();
@@ -36,13 +36,13 @@ export function UserDashboard() {
       await registerEntrance.mutateAsync();
       toast({
         title: 'Ingresso registrato!',
-        description: 'Buon allenamento! 🏊‍♂️',
+        description: 'Buon allenamento! 🏊‍♂️'
       });
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Errore',
-        description: error?.message || 'Impossibile registrare l\'ingresso.',
+        description: error?.message || 'Impossibile registrare l\'ingresso.'
       });
     }
   };
@@ -70,17 +70,17 @@ export function UserDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {isAdmin && (
-                <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
+              {isAdmin &&
+              <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
                   Admin
                 </Badge>
-              )}
+              }
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
+                className="text-primary-foreground hover:bg-primary-foreground/20">
+                
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -102,17 +102,17 @@ export function UserDashboard() {
             <p className={`text-lg ${remainingEntrances < 0 ? 'text-destructive-foreground/80' : 'text-primary-foreground/80'}`}>Ingressi rimanenti</p>
           </div>
           <CardContent className="p-6 space-y-3">
-            {hasEnteredToday ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/15 border border-accent text-accent-foreground">
+            {hasEnteredToday ?
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/15 border border-accent text-accent-foreground">
                 <span className="text-xl">✅</span>
-                <p className="text-sm font-medium">Ingresso registrato oggi</p>
-              </div>
-            ) : null}
+                <p className="text-sm font-medium text-secondary-foreground">Ingresso registrato oggi</p>
+              </div> :
+            null}
             <Button
               onClick={() => setShowConfirmDialog(true)}
               disabled={registerEntrance.isPending}
-              className="w-full h-14 text-lg bg-gradient-primary shadow-soft hover:shadow-elevated transition-all"
-            >
+              className="w-full h-14 text-lg bg-gradient-primary shadow-soft hover:shadow-elevated transition-all">
+              
               {registerEntrance.isPending ? 'Registrazione...' : '🏊‍♂️ Registra Ingresso'}
             </Button>
             
@@ -122,11 +122,11 @@ export function UserDashboard() {
                   <AlertDialogTitle>Conferma ingresso</AlertDialogTitle>
                   <AlertDialogDescription>
                     Stai per registrare un ingresso in piscina. 
-                    {remainingEntrances <= 0 && (
-                      <span className="block mt-2 text-destructive font-medium">
+                    {remainingEntrances <= 0 &&
+                    <span className="block mt-2 text-destructive font-medium">
                         ⚠️ Attenzione: il tuo saldo andrà in negativo!
                       </span>
-                    )}
+                    }
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -137,11 +137,11 @@ export function UserDashboard() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            {remainingEntrances < 0 && (
-              <p className="text-center text-destructive mt-3 text-sm font-medium">
+            {remainingEntrances < 0 &&
+            <p className="text-center text-destructive mt-3 text-sm font-medium">
                 ⚠️ Attenzione: hai {Math.abs(remainingEntrances)} ingress{Math.abs(remainingEntrances) === 1 ? 'o' : 'i'} in debito. Contatta l'amministratore.
               </p>
-            )}
+            }
           </CardContent>
         </Card>
 
@@ -179,15 +179,15 @@ export function UserDashboard() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                {entranceLogs.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {entranceLogs.slice(0, 10).map((log) => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
+                {entranceLogs.length === 0 ?
+                <p className="text-center text-muted-foreground py-4">Nessun ingresso registrato</p> :
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {entranceLogs.slice(0, 10).map((log) =>
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                             <Waves className="w-4 h-4 text-primary" />
@@ -198,9 +198,9 @@ export function UserDashboard() {
                           {format(new Date(log.entrance_date), 'dd MMM yyyy, HH:mm', { locale: it })}
                         </span>
                       </div>
-                    ))}
+                  )}
                   </div>
-                )}
+                }
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -222,24 +222,24 @@ export function UserDashboard() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                {credits.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Nessun versamento registrato</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {credits.map((credit) => (
-                      <div
-                        key={credit.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
+                {credits.length === 0 ?
+                <p className="text-center text-muted-foreground py-4">Nessun versamento registrato</p> :
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {credits.map((credit) =>
+                  <div
+                    key={credit.id}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center">
                             <Ticket className="w-4 h-4 text-accent" />
                           </div>
                           <div>
                             <span className="font-medium">+{credit.entrances_added} ingressi</span>
-                            {credit.notes && (
-                              <p className="text-xs text-muted-foreground">{credit.notes}</p>
-                            )}
+                            {credit.notes &&
+                        <p className="text-xs text-muted-foreground">{credit.notes}</p>
+                        }
                           </div>
                         </div>
                         <div className="text-right">
@@ -249,14 +249,14 @@ export function UserDashboard() {
                           </p>
                         </div>
                       </div>
-                    ))}
+                  )}
                   </div>
-                )}
+                }
               </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>
       </main>
-    </div>
-  );
+    </div>);
+
 }
