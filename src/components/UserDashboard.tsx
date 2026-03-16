@@ -49,6 +49,11 @@ export function UserDashboard() {
 
   const totalPaid = credits.reduce((sum, c) => sum + Number(c.amount_paid), 0);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const hasEnteredToday = entranceLogs.some(
+    (log) => log.entrance_date.slice(0, 10) === today
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
