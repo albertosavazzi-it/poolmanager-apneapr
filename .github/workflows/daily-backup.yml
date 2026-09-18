@@ -19,12 +19,21 @@ jobs:
           echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
       - name: Esegui pg_dump
+        env:
+          PGVERSION: "17"
         run: |
           mkdir -p backups
           DATA=$(date +'%Y-%m-%d_%H-%M')
-          pg_dump -v -Fc --no-owner --no-privileges \
+          if [ -x /usr/lib/postgresql/17/bin/pg_dump ]; then
+            PGBIN="/usr/lib/postgresql/17/bin/pg_dump"
+          else
+            PGBIN="pg_dump"
+          fi
+          $PGBIN --version
+          $PGBIN -v -Fc --no-owner --no-privileges \
             --schema=public \
             --schema=auth \
             "${{ secrets.SUPABASE_DB_URL }}" > "backups/supabase-backup-${DATA}.dump"
