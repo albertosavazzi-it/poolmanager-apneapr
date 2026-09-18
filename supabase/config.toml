@@ -1,4 +1,4 @@
-project_id = "cqyobvawdxsfiudzhtdp"
+project_id = "mddoqalpbvkehxmwsxqu"
 
 [functions.notify-admin-new-user]
 verify_jwt = false
