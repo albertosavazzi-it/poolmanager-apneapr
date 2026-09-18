@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Waves, LogOut, Ticket, Calendar, Euro, ChevronDown, ChevronUp } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -19,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle } from
 '@/components/ui/alert-dialog';
+import { APP_VERSION } from '@/config/version';
 
 export function UserDashboard() {
   const { user, signOut, isAdmin } = useAuth();
@@ -61,11 +63,16 @@ export function UserDashboard() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-foreground/20 rounded-xl flex items-center justify-center">
-                <Waves className="w-6 h-6 text-primary-foreground" />
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-soft">
+                <AppLogo className="w-8 h-8" />
               </div>
               <div>
-                <h1 className="text-xl font-display text-primary-foreground">Pool Manager</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-display text-primary-foreground">Pool Manager</h1>
+                  <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-[10px] px-1.5 py-0 font-mono font-normal">
+                    {APP_VERSION}
+                  </Badge>
+                </div>
                 <p className="text-primary-foreground/80 text-sm">Ciao, {user?.user_metadata?.full_name || user?.email}</p>
               </div>
             </div>
@@ -256,6 +263,10 @@ export function UserDashboard() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+
+        <footer className="text-center py-6 text-xs text-muted-foreground border-t mt-8">
+          Pool Manager <span className="font-mono">{APP_VERSION}</span> • Apnea PR
+        </footer>
       </main>
     </div>);
 

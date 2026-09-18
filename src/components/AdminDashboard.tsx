@@ -12,12 +12,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2, Eye, EyeOff, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { exportToCSV, PaymentExportRow, exportUserSummaryToCSV, UserSummaryExportRow } from '@/lib/exportUtils';
+import { ExpensesManager } from '@/components/ExpensesManager';
+import { AppLogo } from '@/components/AppLogo';
+import { APP_VERSION } from '@/config/version';
 import { cn } from '@/lib/utils';
 function AddCreditsDialog({
   user,
@@ -378,6 +382,11 @@ export function AdminDashboard() {
     const filteredCredits = incomeStartDate ? u.credits.filter(c => new Date(c.payment_date) >= incomeStartDate) : u.credits;
     return sum + filteredCredits.reduce((cSum, c) => cSum + Number(c.amount_paid), 0);
   }, 0);
+
+  // Totale incassato complessivo (per bilancio cassa)
+  const totalPaidAllTime = users.reduce((sum, u) => {
+    return sum + u.credits.reduce((cSum, c) => cSum + Number(c.amount_paid), 0);
+  }, 0);
   const handleExportPayments = () => {
     const allPayments: PaymentExportRow[] = [];
     users.forEach(user => {
@@ -444,11 +453,16 @@ export function AdminDashboard() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-foreground/20 rounded-xl flex items-center justify-center">
-                <Waves className="w-6 h-6 text-primary-foreground" />
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-soft">
+                <AppLogo className="w-8 h-8" />
               </div>
               <div>
-                <h1 className="text-xl text-primary-foreground font-serif">Pool Manager</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl text-primary-foreground font-serif">Pool Manager</h1>
+                  <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-[10px] px-1.5 py-0 font-mono font-normal">
+                    {APP_VERSION}
+                  </Badge>
+                </div>
                 <p className="text-primary-foreground/80 text-sm">Pannello Admin</p>
               </div>
             </div>
@@ -469,8 +483,21 @@ export function AdminDashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full max-w-sm grid-cols-2 p-1 bg-muted/80 rounded-xl">
+            <TabsTrigger value="users" className="gap-2 rounded-lg py-2">
+              <Users className="w-4 h-4" />
+              <span>Utenti & Ingressi</span>
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="gap-2 rounded-lg py-2">
+              <Wallet className="w-4 h-4" />
+              <span>Cassa & Uscite</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users" className="space-y-6 mt-0">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Dialog open={showPresentToday} onOpenChange={(open) => {
               setShowPresentToday(open);
               if (open) setPresentDate(new Date());
@@ -579,18 +606,10 @@ export function AdminDashboard() {
           </Popover>
         </div>
 
-        {/* Search and Export */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cerca utente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
-          </div>
-          <Button onClick={handleExportPayments} variant="outline" className="shrink-0">
-            <Download className="w-4 h-4 mr-2" /> Versamenti
-          </Button>
-          <Button onClick={handleExportUserSummary} variant="outline" className="shrink-0">
-            <Download className="w-4 h-4 mr-2" /> Situazione
-          </Button>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Cerca utente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
 
         {/* Users List */}
@@ -646,6 +665,20 @@ export function AdminDashboard() {
               {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} isPresentToday={usersPresentOnDate.some(p => p.profile.id === u.profile.id)} />)}
             </div>}
         </div>
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-6 mt-0">
+            <ExpensesManager 
+              totalIncome={totalPaidAllTime} 
+              onExportPayments={handleExportPayments}
+              onExportUserSummary={handleExportUserSummary}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <footer className="text-center py-6 text-xs text-muted-foreground border-t mt-8">
+          Pool Manager <span className="font-mono">{APP_VERSION}</span> • Apnea PR
+        </footer>
       </main>
     </div>;
 }

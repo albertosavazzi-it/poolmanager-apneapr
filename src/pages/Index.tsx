@@ -3,7 +3,7 @@ import { AuthForm } from '@/components/AuthForm';
 import { UserDashboard } from '@/components/UserDashboard';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { SetNewPasswordForm } from '@/components/SetNewPasswordForm';
-import { Waves } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 
 function AppContent() {
   const { user, loading, isAdmin, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -12,8 +12,8 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-hero">
         <div className="text-center animate-pulse">
-          <div className="w-20 h-20 bg-primary-foreground/20 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-wave">
-            <Waves className="w-10 h-10 text-primary-foreground" />
+          <div className="w-20 h-20 bg-white/90 rounded-2xl p-3 flex items-center justify-center mx-auto mb-4 shadow-elevated animate-wave">
+            <AppLogo className="w-14 h-14" />
           </div>
           <p className="text-primary-foreground text-lg">Caricamento...</p>
         </div>

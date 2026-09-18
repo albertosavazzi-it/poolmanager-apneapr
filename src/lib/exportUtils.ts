@@ -64,3 +64,32 @@ export function exportUserSummaryToCSV(data: UserSummaryExportRow[], filename: s
 
   downloadCSV(csvContent, filename);
 }
+
+export interface ExpenseExportRow {
+  date: string;
+  category: string;
+  title: string;
+  beneficiary: string | null;
+  amount: number;
+  paymentMethod: string | null;
+  notes: string | null;
+}
+
+export function exportExpensesToCSV(data: ExpenseExportRow[], filename: string) {
+  const headers = ['Data', 'Categoria', 'Descrizione/Titolo', 'Destinatario/Beneficiario', 'Importo (€)', 'Metodo Pagamento', 'Note'];
+  
+  const csvContent = [
+    headers.join(';'),
+    ...data.map(row => [
+      format(new Date(row.date), 'dd/MM/yyyy', { locale: it }),
+      `"${row.category}"`,
+      `"${row.title}"`,
+      `"${row.beneficiary || ''}"`,
+      row.amount.toFixed(2).replace('.', ','),
+      `"${row.paymentMethod || ''}"`,
+      `"${row.notes || ''}"`,
+    ].join(';'))
+  ].join('\n');
+
+  downloadCSV(csvContent, filename);
+}

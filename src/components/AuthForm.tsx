@@ -7,7 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Waves, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { useToast } from '@/hooks/use-toast';
+import { APP_VERSION } from '@/config/version';
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -109,8 +111,8 @@ export function AuthForm() {
 
         <Card className="w-full max-w-md shadow-elevated glass-effect animate-scale-in relative z-10">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-soft animate-wave">
-              <Waves className="w-8 h-8 text-primary-foreground" />
+            <div className="mx-auto w-16 h-16 bg-white/95 rounded-2xl flex items-center justify-center p-2.5 shadow-elevated animate-wave">
+              <AppLogo className="w-11 h-11" />
             </div>
             <CardTitle className="text-2xl font-display">Recupera Password</CardTitle>
             <CardDescription>Inserisci la tua email per ricevere il link di reset</CardDescription>
@@ -162,8 +164,8 @@ export function AuthForm() {
 
       <Card className="w-full max-w-md shadow-elevated glass-effect animate-scale-in relative z-10">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-soft animate-wave">
-            <Waves className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto w-16 h-16 bg-white/95 rounded-2xl flex items-center justify-center p-2.5 shadow-elevated animate-wave">
+            <AppLogo className="w-11 h-11" />
           </div>
           <CardTitle className="text-3xl font-display text-gradient">Pool Manager</CardTitle>
           <CardDescription>Gestisci i tuoi ingressi in piscina</CardDescription>
@@ -279,6 +281,10 @@ export function AuthForm() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <p className="text-center text-xs text-primary-foreground/70 mt-4 font-mono">
+        Pool Manager {APP_VERSION} • Apnea PR
+      </p>
     </div>
   );
 }
