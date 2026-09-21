@@ -116,6 +116,7 @@ export type Database = {
           full_name: string
           id: string
           is_hidden: boolean
+          medical_certificate_expiry: string | null
           updated_at: string
           user_id: string
         }
@@ -124,6 +125,7 @@ export type Database = {
           full_name: string
           id?: string
           is_hidden?: boolean
+          medical_certificate_expiry?: string | null
           updated_at?: string
           user_id: string
         }
@@ -132,6 +134,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_hidden?: boolean
+          medical_certificate_expiry?: string | null
           updated_at?: string
           user_id?: string
         }

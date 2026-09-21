@@ -1,9 +1,9 @@
 import { useAuth } from '@/hooks/useAuth';
-import { useRemainingEntrances, useMyEntranceLogs, useMyCredits, useRegisterEntrance } from '@/hooks/useEntrances';
+import { useRemainingEntrances, useMyEntranceLogs, useMyCredits, useRegisterEntrance, useMyProfile, getMedicalCertificateStatus } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Waves, LogOut, Ticket, Calendar, Euro, ChevronDown, ChevronUp } from 'lucide-react';
+import { Waves, LogOut, Ticket, Calendar, Euro, ChevronDown, ChevronUp, AlertTriangle, Clock, FileText } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -27,11 +27,14 @@ export function UserDashboard() {
   const { data: remainingEntrances = 0, isLoading: loadingEntrances } = useRemainingEntrances();
   const { data: entranceLogs = [] } = useMyEntranceLogs();
   const { data: credits = [] } = useMyCredits();
+  const { data: profile } = useMyProfile();
   const registerEntrance = useRegisterEntrance();
   const { toast } = useToast();
   const [showHistory, setShowHistory] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const certStatus = getMedicalCertificateStatus(profile?.medical_certificate_expiry);
 
   const handleRegisterEntrance = async () => {
     try {
@@ -97,6 +100,33 @@ export function UserDashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-6">
+        {/* Banner Scadenza Certificato Medico (Avviso non bloccante) */}
+        {certStatus.status === 'expired' && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/15 border-2 border-destructive text-destructive animate-fade-in shadow-soft">
+            <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-base mb-1">Certificato Medico Scaduto</p>
+              <p className="leading-relaxed">
+                Il tuo certificato medico è scaduto il <strong>{certStatus.formattedDate}</strong> ({Math.abs(certStatus.daysRemaining ?? 0)} {Math.abs(certStatus.daysRemaining ?? 0) === 1 ? 'giorno' : 'giorni'} fa).
+                Ricordati di consegnare il certificato rinnovato al tuo istruttore o in segreteria per essere in regola con gli allenamenti.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {certStatus.status === 'expiring' && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/15 border-2 border-amber-500/70 text-amber-900 dark:text-amber-200 animate-fade-in shadow-soft">
+            <Clock className="w-6 h-6 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-base mb-1 text-amber-800 dark:text-amber-300">Certificato Medico in Scadenza</p>
+              <p className="leading-relaxed">
+                Il tuo certificato medico scadrà tra <strong>{certStatus.daysRemaining} {certStatus.daysRemaining === 1 ? 'giorno' : 'giorni'}</strong> (il <strong>{certStatus.formattedDate}</strong>).
+                Prenota per tempo la visita di rinnovo!
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Remaining Entrances Card */}
         <Card className="shadow-card overflow-hidden">
           <div className={`p-6 text-center ${remainingEntrances < 0 ? 'bg-destructive' : 'bg-gradient-primary'}`}>
@@ -169,6 +199,43 @@ export function UserDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Medical Certificate Info Card */}
+        <Card className="shadow-soft">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                certStatus.status === 'valid' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+                certStatus.status === 'expiring' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' :
+                certStatus.status === 'expired' ? 'bg-destructive/15 text-destructive' :
+                'bg-muted text-muted-foreground'
+              }`}>
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Certificato Medico</p>
+                <p className="text-sm font-semibold">
+                  {certStatus.formattedDate ? `Scadenza: ${certStatus.formattedDate}` : 'Data non impostata'}
+                </p>
+              </div>
+            </div>
+            <Badge variant={
+              certStatus.status === 'valid' ? 'default' :
+              certStatus.status === 'expiring' ? 'outline' :
+              certStatus.status === 'expired' ? 'destructive' :
+              'secondary'
+            } className={
+              certStatus.status === 'valid' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' :
+              certStatus.status === 'expiring' ? 'border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-500/10 font-medium' :
+              undefined
+            }>
+              {certStatus.status === 'valid' ? 'In regola' :
+               certStatus.status === 'expiring' ? `Scade tra ${certStatus.daysRemaining} gg` :
+               certStatus.status === 'expired' ? 'Scaduto' :
+               'Da verificare'}
+            </Badge>
+          </CardContent>
+        </Card>
 
         {/* Entrance History */}
         <Collapsible open={showHistory} onOpenChange={setShowHistory}>

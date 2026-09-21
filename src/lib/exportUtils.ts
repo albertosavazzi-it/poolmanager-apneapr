@@ -15,6 +15,7 @@ export interface UserSummaryExportRow {
   usedEntrances: number;
   remainingEntrances: number;
   totalPaid: number;
+  medicalCertificateExpiry?: string | null;
 }
 
 function downloadCSV(csvContent: string, filename: string) {
@@ -49,7 +50,7 @@ export function exportToCSV(data: PaymentExportRow[], filename: string) {
 }
 
 export function exportUserSummaryToCSV(data: UserSummaryExportRow[], filename: string) {
-  const headers = ['Nome Utente', 'Ingressi Totali', 'Ingressi Utilizzati', 'Ingressi Rimanenti', 'Totale Versato (€)'];
+  const headers = ['Nome Utente', 'Ingressi Totali', 'Ingressi Utilizzati', 'Ingressi Rimanenti', 'Totale Versato (€)', 'Scadenza Certificato Medico'];
   
   const csvContent = [
     headers.join(';'),
@@ -59,6 +60,9 @@ export function exportUserSummaryToCSV(data: UserSummaryExportRow[], filename: s
       row.usedEntrances,
       row.remainingEntrances,
       row.totalPaid.toFixed(2).replace('.', ','),
+      row.medicalCertificateExpiry
+        ? format(new Date(row.medicalCertificateExpiry), 'dd/MM/yyyy', { locale: it })
+        : 'Non inserito',
     ].join(';'))
   ].join('\n');
 

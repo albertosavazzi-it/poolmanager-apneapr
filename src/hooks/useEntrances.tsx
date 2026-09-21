@@ -27,6 +27,7 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
   is_hidden: boolean;
+  medical_certificate_expiry: string | null;
 }
 
 export interface UserWithEntrances {
@@ -303,3 +304,76 @@ export function useToggleUserHidden() {
     },
   });
 }
+
+export function useMyProfile() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['my-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as UserProfile | null;
+    },
+    enabled: !!user,
+  });
+}
+
+export function useUpdateMedicalCertificate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ profileId, expiryDate }: { profileId: string; expiryDate: string | null }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ medical_certificate_expiry: expiryDate })
+        .eq('id', profileId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users-entrances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    },
+  });
+}
+
+export type MedicalCertificateStatus = 'valid' | 'expiring' | 'expired' | 'missing';
+
+export function getMedicalCertificateStatus(expiryDate: string | null | undefined): {
+  status: MedicalCertificateStatus;
+  daysRemaining: number | null;
+  formattedDate: string | null;
+} {
+  if (!expiryDate) {
+    return { status: 'missing', daysRemaining: null, formattedDate: null };
+  }
+
+  const [year, month, day] = expiryDate.split('-').map(Number);
+  const expiry = new Date(year, month - 1, day);
+  expiry.setHours(23, 59, 59, 999);
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const diffTime = expiry.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  const formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+
+  if (diffDays < 0) {
+    return { status: 'expired', daysRemaining: diffDays, formattedDate };
+  } else if (diffDays <= 30) {
+    return { status: 'expiring', daysRemaining: diffDays, formattedDate };
+  } else {
+    return { status: 'valid', daysRemaining: diffDays, formattedDate };
+  }
+}
+

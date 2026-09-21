@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, checkEntranceToday, UserWithEntrances } from '@/hooks/useEntrances';
+import { useAllUsersWithEntrances, useAddCredits, useAdminRegisterEntrance, useDeleteEntranceLog, useToggleUserHidden, useUpdateMedicalCertificate, getMedicalCertificateStatus, checkEntranceToday, UserWithEntrances } from '@/hooks/useEntrances';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -97,6 +97,104 @@ function AddCreditsDialog({
       </DialogContent>
     </Dialog>;
 }
+
+function EditMedicalCertificateDialog({
+  user,
+  onSuccess,
+}: {
+  user: UserWithEntrances;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [expiryDate, setExpiryDate] = useState(user.profile.medical_certificate_expiry || '');
+  const updateCertificate = useUpdateMedicalCertificate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setExpiryDate(user.profile.medical_certificate_expiry || '');
+  }, [user.profile.medical_certificate_expiry, open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateCertificate.mutateAsync({
+        profileId: user.profile.id,
+        expiryDate: expiryDate || null,
+      });
+      toast({
+        title: 'Certificato aggiornato!',
+        description: expiryDate
+          ? `Scadenza impostata per ${user.profile.full_name}`
+          : `Scadenza rimossa per ${user.profile.full_name}`,
+      });
+      setOpen(false);
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Errore',
+        description: error?.message || 'Impossibile aggiornare la scadenza.',
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs flex items-center gap-1 hover:bg-primary/10 text-muted-foreground hover:text-foreground">
+          <CalendarIcon className="w-3 h-3" />
+          <span>Modifica</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Certificato Medico</DialogTitle>
+          <DialogDescription>
+            Imposta o aggiorna la data di scadenza del certificato per <strong>{user.profile.full_name}</strong>.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={`cert-${user.profile.id}`}>Data di Scadenza</Label>
+            <Input
+              id={`cert-${user.profile.id}`}
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Lascia vuoto se il certificato non è ancora stato presentato.
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            {expiryDate && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 text-xs"
+                onClick={() => setExpiryDate('')}
+              >
+                Rimuovi data
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+                Annulla
+              </Button>
+              <Button type="submit" size="sm" disabled={updateCertificate.isPending} className="bg-gradient-primary">
+                {updateCertificate.isPending ? 'Salvataggio...' : 'Salva Scadenza'}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function UserCard({
   user,
   onUpdate,
@@ -110,10 +208,9 @@ function UserCard({
   const adminRegisterEntrance = useAdminRegisterEntrance();
   const deleteEntranceLog = useDeleteEntranceLog();
   const toggleUserHidden = useToggleUserHidden();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const certStatus = getMedicalCertificateStatus(user.profile.medical_certificate_expiry);
 
   const handleDeductEntrance = async () => {
     try {
@@ -207,6 +304,27 @@ function UserCard({
                 locale: it
               })}
               </CardDescription>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <Badge
+                  variant={
+                    certStatus.status === 'valid' ? 'default' :
+                    certStatus.status === 'expiring' ? 'outline' :
+                    certStatus.status === 'expired' ? 'destructive' :
+                    'secondary'
+                  }
+                  className={cn(
+                    "text-xs font-normal",
+                    certStatus.status === 'valid' && "bg-emerald-600 hover:bg-emerald-600 text-white",
+                    certStatus.status === 'expiring' && "border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-500/10"
+                  )}
+                >
+                  {certStatus.status === 'valid' && `Certificato: Scad. ${certStatus.formattedDate}`}
+                  {certStatus.status === 'expiring' && `Certificato: Scade tra ${certStatus.daysRemaining} gg (${certStatus.formattedDate})`}
+                  {certStatus.status === 'expired' && `Certificato: Scaduto (${certStatus.formattedDate})`}
+                  {certStatus.status === 'missing' && 'Certificato: non impostato'}
+                </Badge>
+                <EditMedicalCertificateDialog user={user} onSuccess={onUpdate} />
+              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={handleDeductEntrance} disabled={adminRegisterEntrance.isPending} title="Scala ingresso">
@@ -357,10 +475,20 @@ export function AdminDashboard() {
     toast
   } = useToast();
   
-  // Filtra utenti per ricerca e visibilità
+  const [certFilter, setCertFilter] = useState<'all' | 'expired' | 'expiring' | 'missing'>('all');
+
+  const expiredCertCount = users.filter(u => getMedicalCertificateStatus(u.profile.medical_certificate_expiry).status === 'expired').length;
+  const expiringCertCount = users.filter(u => getMedicalCertificateStatus(u.profile.medical_certificate_expiry).status === 'expiring').length;
+
+  // Filtra utenti per ricerca, visibilità e stato certificato
   const filteredUsers = users
     .filter(u => u.profile.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(u => showHiddenUsers || !u.profile.is_hidden);
+    .filter(u => showHiddenUsers || !u.profile.is_hidden)
+    .filter(u => {
+      if (certFilter === 'all') return true;
+      const status = getMedicalCertificateStatus(u.profile.medical_certificate_expiry).status;
+      return status === certFilter;
+    });
   
   const hiddenUsersCount = users.filter(u => u.profile.is_hidden).length;
 
@@ -428,6 +556,7 @@ export function AdminDashboard() {
         usedEntrances: u.usedEntrances,
         remainingEntrances: u.remainingEntrances,
         totalPaid: u.totalPaid,
+        medicalCertificateExpiry: u.profile.medical_certificate_expiry,
       }))
       .sort((a, b) => a.userName.localeCompare(b.userName));
 
@@ -610,6 +739,45 @@ export function AdminDashboard() {
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Cerca utente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+        </div>
+
+        {/* Certificate Quick Filter */}
+        <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-muted/40 border text-xs">
+          <span className="text-muted-foreground font-medium mr-1">Filtro Certificato:</span>
+          <Badge
+            variant={certFilter === 'all' ? 'default' : 'outline'}
+            className="cursor-pointer font-normal hover:opacity-80 transition-opacity"
+            onClick={() => setCertFilter('all')}
+          >
+            Tutti
+          </Badge>
+          <Badge
+            variant={certFilter === 'expired' ? 'destructive' : 'outline'}
+            className={cn(
+              "cursor-pointer font-normal hover:opacity-80 transition-opacity",
+              certFilter !== 'expired' && expiredCertCount > 0 && "border-destructive text-destructive"
+            )}
+            onClick={() => setCertFilter('expired')}
+          >
+            Scaduti ({expiredCertCount})
+          </Badge>
+          <Badge
+            variant={certFilter === 'expiring' ? 'default' : 'outline'}
+            className={cn(
+              "cursor-pointer font-normal hover:opacity-80 transition-opacity",
+              certFilter === 'expiring' ? "bg-amber-600 hover:bg-amber-600 text-white" : expiringCertCount > 0 ? "border-amber-500 text-amber-700 dark:text-amber-300" : ""
+            )}
+            onClick={() => setCertFilter('expiring')}
+          >
+            In scadenza ({expiringCertCount})
+          </Badge>
+          <Badge
+            variant={certFilter === 'missing' ? 'secondary' : 'outline'}
+            className="cursor-pointer font-normal hover:opacity-80 transition-opacity"
+            onClick={() => setCertFilter('missing')}
+          >
+            Non impostati
+          </Badge>
         </div>
 
         {/* Users List */}
