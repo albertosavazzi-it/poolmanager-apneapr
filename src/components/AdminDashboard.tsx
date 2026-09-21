@@ -450,27 +450,6 @@ export function AdminDashboard() {
   const [presentDate, setPresentDate] = useState<Date>(new Date());
   const [showPresentDatePicker, setShowPresentDatePicker] = useState(false);
   const [showHiddenUsers, setShowHiddenUsers] = useState(false);
-  const [incomeStartDate, setIncomeStartDate] = useState<Date | undefined>(() => {
-    try {
-      const saved = localStorage.getItem('incomeStartDate');
-      if (saved) {
-        const date = new Date(saved);
-        if (!isNaN(date.getTime())) return date;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return undefined;
-  });
-  const [incomePopoverOpen, setIncomePopoverOpen] = useState(false);
-
-  useEffect(() => {
-    if (incomeStartDate) {
-      localStorage.setItem('incomeStartDate', incomeStartDate.toISOString());
-    } else {
-      localStorage.removeItem('incomeStartDate');
-    }
-  }, [incomeStartDate]);
   const {
     toast
   } = useToast();
@@ -504,12 +483,6 @@ export function AdminDashboard() {
   const presentCount = usersPresentOnDate.length;
   const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
   const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
-
-  // Calcola il totale incassato filtrato per data di partenza
-  const totalPaid = users.reduce((sum, u) => {
-    const filteredCredits = incomeStartDate ? u.credits.filter(c => new Date(c.payment_date) >= incomeStartDate) : u.credits;
-    return sum + filteredCredits.reduce((cSum, c) => cSum + Number(c.amount_paid), 0);
-  }, 0);
 
   // Totale incassato complessivo (per bilancio cassa)
   const totalPaidAllTime = users.reduce((sum, u) => {
@@ -626,7 +599,7 @@ export function AdminDashboard() {
 
           <TabsContent value="users" className="space-y-6 mt-0">
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Dialog open={showPresentToday} onOpenChange={(open) => {
               setShowPresentToday(open);
               if (open) setPresentDate(new Date());
@@ -702,37 +675,6 @@ export function AdminDashboard() {
               <p className="text-sm text-muted-foreground">Ingressi usati</p>
             </CardContent>
           </Card>
-          <Popover open={incomePopoverOpen} onOpenChange={setIncomePopoverOpen}>
-            <PopoverTrigger asChild>
-              <Card className="shadow-soft cursor-pointer hover:shadow-elevated transition-shadow">
-                <CardContent className="p-4 text-center">
-                  <Euro className="w-8 h-8 mx-auto text-success mb-2" />
-                  <p className="text-2xl font-bold">€{totalPaid.toFixed(0)}</p>
-                  <p className="text-sm text-muted-foreground">Totale incassato</p>
-                  {incomeStartDate && <p className="text-xs text-primary mt-1">
-                      dal {format(incomeStartDate, 'dd/MM/yyyy')}
-                    </p>}
-                </CardContent>
-              </Card>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <div className="p-3 border-b">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Filtra da data</p>
-                  {incomeStartDate && <Button variant="ghost" size="sm" onClick={() => {
-                  setIncomeStartDate(undefined);
-                  setIncomePopoverOpen(false);
-                }} className="h-7 px-2 text-muted-foreground">
-                      <X className="w-3 h-3 mr-1" /> Rimuovi
-                    </Button>}
-                </div>
-              </div>
-            <Calendar mode="single" selected={incomeStartDate} onSelect={date => {
-              setIncomeStartDate(date);
-              setIncomePopoverOpen(false);
-            }} disabled={date => date > new Date()} initialFocus locale={it} className={cn("p-3 pointer-events-auto")} />
-            </PopoverContent>
-          </Popover>
         </div>
 
         {/* Search */}
