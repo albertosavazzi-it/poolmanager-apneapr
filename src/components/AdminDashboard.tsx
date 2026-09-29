@@ -66,7 +66,11 @@ function AddCreditsDialog({
   };
   return <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-gradient-primary">
+        <Button
+          size="sm"
+          variant="outline"
+          className="bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary border-primary/25 hover:border-primary/40 font-medium transition-colors"
+        >
           <Plus className="w-4 h-4 mr-1" /> Aggiungi
         </Button>
       </DialogTrigger>
@@ -350,7 +354,14 @@ function UserCard({
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleDeductEntrance} disabled={adminRegisterEntrance.isPending} title="Scala ingresso">
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary border-primary/25 hover:border-primary/40 font-medium transition-colors"
+                onClick={handleDeductEntrance}
+                disabled={adminRegisterEntrance.isPending}
+                title="Scala ingresso"
+              >
                 <Minus className="w-4 h-4 mr-1" /> Scala
               </Button>
               <AddCreditsDialog user={user} onSuccess={onUpdate} />
