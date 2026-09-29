@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2, Eye, EyeOff, Wallet } from 'lucide-react';
+import { Waves, LogOut, Users, Euro, Ticket, Plus, ChevronDown, ChevronUp, Search, Minus, Download, CalendarIcon, X, Trash2, Eye, EyeOff, Wallet, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -202,11 +202,15 @@ function EditMedicalCertificateDialog({
 function UserCard({
   user,
   onUpdate,
-  isPresentToday
+  isPresentToday,
+  isToday = true,
+  entrancesCountOnDate = 0,
 }: {
   user: UserWithEntrances;
   onUpdate: () => void;
   isPresentToday: boolean;
+  isToday?: boolean;
+  entrancesCountOnDate?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const adminRegisterEntrance = useAdminRegisterEntrance();
@@ -290,13 +294,24 @@ function UserCard({
       });
     }
   };
-  return <Card className={cn("shadow-soft animate-fade-in", user.profile.is_hidden && "opacity-60", isPresentToday && "ring-[3px] ring-accent border-accent shadow-[0_0_15px_hsl(var(--accent)/0.35)]")}>
+  return <Card className={cn(
+    "shadow-soft animate-fade-in transition-all duration-300", 
+    user.profile.is_hidden && "opacity-60", 
+    isPresentToday && "border-emerald-500/80 ring-2 ring-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-[0_4px_20px_-2px_rgba(16,185,129,0.22)] border-l-[6px] border-l-emerald-600 dark:border-l-emerald-400"
+  )}>
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg">{user.profile.full_name}</CardTitle>
+                {isPresentToday && (
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-medium text-xs px-2.5 py-0.5 shadow-sm flex items-center gap-1 border-0">
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {isToday ? 'Presente oggi' : 'Presente'}
+                    {entrancesCountOnDate > 1 && ` (${entrancesCountOnDate})`}
+                  </Badge>
+                )}
                 {user.profile.is_hidden && (
                   <Badge variant="secondary" className="text-xs">
                     <EyeOff className="w-3 h-3 mr-1" /> Nascosto
@@ -769,7 +784,24 @@ export function AdminDashboard() {
           </div>
 
           {isLoading ? <div className="text-center py-8 text-muted-foreground">Caricamento...</div> : filteredUsers.length === 0 ? <div className="text-center py-8 text-muted-foreground">Nessun utente trovato</div> : <div className="grid gap-4 md:grid-cols-2">
-              {filteredUsers.map(u => <UserCard key={u.profile.id} user={u} onUpdate={() => refetch()} isPresentToday={usersPresentOnDate.some(p => p.profile.id === u.profile.id)} />)}
+              {filteredUsers.map(u => {
+                const isPresent = usersPresentOnDate.some(p => p.profile.id === u.profile.id);
+                const countOnDate = u.logs.filter(log => {
+                  const logDate = new Date(log.entrance_date);
+                  logDate.setHours(0, 0, 0, 0);
+                  return logDate.getTime() === selectedDay.getTime();
+                }).length;
+                return (
+                  <UserCard
+                    key={u.profile.id}
+                    user={u}
+                    onUpdate={() => refetch()}
+                    isPresentToday={isPresent}
+                    isToday={isToday}
+                    entrancesCountOnDate={countOnDate}
+                  />
+                );
+              })}
             </div>}
         </div>
           </TabsContent>
