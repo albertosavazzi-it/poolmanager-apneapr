@@ -101,9 +101,11 @@ function AddCreditsDialog({
 function EditMedicalCertificateDialog({
   user,
   onSuccess,
+  children,
 }: {
   user: UserWithEntrances;
   onSuccess: () => void;
+  children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [expiryDate, setExpiryDate] = useState(user.profile.medical_certificate_expiry || '');
@@ -141,10 +143,12 @@ function EditMedicalCertificateDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs flex items-center gap-1 hover:bg-primary/10 text-muted-foreground hover:text-foreground">
-          <CalendarIcon className="w-3 h-3" />
-          <span>Modifica</span>
-        </Button>
+        {children || (
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs flex items-center gap-1 hover:bg-primary/10 text-muted-foreground hover:text-foreground">
+            <CalendarIcon className="w-3 h-3" />
+            <span>Modifica</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -305,25 +309,34 @@ function UserCard({
               })}
               </CardDescription>
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <Badge
-                  variant={
-                    certStatus.status === 'valid' ? 'default' :
-                    certStatus.status === 'expiring' ? 'outline' :
-                    certStatus.status === 'expired' ? 'destructive' :
-                    'secondary'
-                  }
-                  className={cn(
-                    "text-xs font-normal",
-                    certStatus.status === 'valid' && "bg-emerald-600 hover:bg-emerald-600 text-white",
-                    certStatus.status === 'expiring' && "border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-500/10"
-                  )}
-                >
-                  {certStatus.status === 'valid' && `Certificato: Scad. ${certStatus.formattedDate}`}
-                  {certStatus.status === 'expiring' && `Certificato: Scade tra ${certStatus.daysRemaining} gg (${certStatus.formattedDate})`}
-                  {certStatus.status === 'expired' && `Certificato: Scaduto (${certStatus.formattedDate})`}
-                  {certStatus.status === 'missing' && 'Certificato: non impostato'}
-                </Badge>
-                <EditMedicalCertificateDialog user={user} onSuccess={onUpdate} />
+                <EditMedicalCertificateDialog user={user} onSuccess={onUpdate}>
+                  <Badge
+                    role="button"
+                    tabIndex={0}
+                    variant={
+                      certStatus.status === 'valid' ? 'default' :
+                      certStatus.status === 'expiring' ? 'outline' :
+                      certStatus.status === 'expired' ? 'destructive' :
+                      'secondary'
+                    }
+                    className={cn(
+                      "text-xs font-normal cursor-pointer select-none transition-all hover:opacity-85 active:scale-95 flex items-center gap-1.5 py-0.5 px-2.5",
+                      certStatus.status === 'valid' && "bg-emerald-600 hover:bg-emerald-700 text-white",
+                      certStatus.status === 'expiring' && "border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20",
+                      certStatus.status === 'expired' && "hover:bg-destructive/90",
+                      certStatus.status === 'missing' && "hover:bg-secondary/80"
+                    )}
+                    title="Premi per modificare la data del certificato"
+                  >
+                    <CalendarIcon className="w-3 h-3 opacity-80" />
+                    <span>
+                      {certStatus.status === 'valid' && `Certificato: Scad. ${certStatus.formattedDate}`}
+                      {certStatus.status === 'expiring' && `Certificato: Scade tra ${certStatus.daysRemaining} gg (${certStatus.formattedDate})`}
+                      {certStatus.status === 'expired' && `Certificato: Scaduto (${certStatus.formattedDate})`}
+                      {certStatus.status === 'missing' && 'Certificato: non impostato'}
+                    </span>
+                  </Badge>
+                </EditMedicalCertificateDialog>
               </div>
             </div>
             <div className="flex gap-2">
@@ -481,8 +494,6 @@ export function AdminDashboard() {
     return logDate.getTime() === selectedDay.getTime();
   }));
   const presentCount = usersPresentOnDate.length;
-  const totalEntrances = users.reduce((sum, u) => sum + u.totalEntrances, 0);
-  const totalUsed = users.reduce((sum, u) => sum + u.usedEntrances, 0);
 
   // Totale incassato complessivo (per bilancio cassa)
   const totalPaidAllTime = users.reduce((sum, u) => {
@@ -599,7 +610,7 @@ export function AdminDashboard() {
 
           <TabsContent value="users" className="space-y-6 mt-0">
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="w-full sm:max-w-xs">
           <Dialog open={showPresentToday} onOpenChange={(open) => {
               setShowPresentToday(open);
               if (open) setPresentDate(new Date());
@@ -661,20 +672,6 @@ export function AdminDashboard() {
                 </div>}
             </DialogContent>
           </Dialog>
-          <Card className="shadow-soft">
-            <CardContent className="p-4 text-center">
-              <Ticket className="w-8 h-8 mx-auto text-accent mb-2" />
-              <p className="text-2xl font-bold">{totalEntrances}</p>
-              <p className="text-sm text-muted-foreground">Ingressi totali</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-soft">
-            <CardContent className="p-4 text-center">
-              <Waves className="w-8 h-8 mx-auto text-primary mb-2" />
-              <p className="text-2xl font-bold">{totalUsed}</p>
-              <p className="text-sm text-muted-foreground">Ingressi usati</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Search */}
