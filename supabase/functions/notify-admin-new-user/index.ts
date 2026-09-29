@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface NewUserNotification {
+  userId?: string;
   userEmail: string;
   userName: string;
 }
@@ -17,106 +18,196 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { userEmail, userName }: NewUserNotification = await req.json();
+    const { userId, userEmail, userName }: NewUserNotification = await req.json();
 
     if (!userEmail || !userName) {
-      throw new Error("Missing required fields: userEmail and userName");
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: userEmail and userName" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(
+        JSON.stringify({ error: "Supabase environment variables not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify user exists and was recently created (within 10 minutes)
-    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
-    if (usersError) {
-      console.error("Error listing users:", usersError);
-      throw new Error("Failed to verify user");
+    // 1. Verify user exists and was recently created (within 15 minutes)
+    let userCreatedAt: Date | null = null;
+
+    if (userId) {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      if (!userError && userData?.user?.created_at) {
+        userCreatedAt = new Date(userData.user.created_at);
+      } else if (userError) {
+        console.warn(`getUserById failed for userId ${userId}:`, userError);
+      }
     }
 
-    const matchingUser = usersData.users.find((u) => u.email === userEmail);
-    if (!matchingUser) {
-      console.log(`User with email ${userEmail} not found`);
+    if (!userCreatedAt) {
+      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers({
+        perPage: 1000,
+      });
+
+      if (usersError) {
+        console.error("Error listing users:", usersError);
+        throw new Error("Failed to verify user");
+      }
+
+      const matchingUser = usersData.users.find(
+        (u) => u.email?.trim().toLowerCase() === userEmail.trim().toLowerCase()
+      );
+
+      if (matchingUser?.created_at) {
+        userCreatedAt = new Date(matchingUser.created_at);
+      }
+    }
+
+    if (!userCreatedAt) {
+      console.warn(`User with email ${userEmail} not found in auth.users`);
       return new Response(
         JSON.stringify({ error: "User not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const userCreatedAt = new Date(matchingUser.created_at!);
     const now = new Date();
     const diffMinutes = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
 
-    if (diffMinutes > 10) {
-      console.log(`User ${userEmail} created ${diffMinutes.toFixed(1)} minutes ago - rejecting`);
+    if (diffMinutes > 15) {
+      console.log(`User ${userEmail} created ${diffMinutes.toFixed(1)} minutes ago - rejecting notification`);
       return new Response(
-        JSON.stringify({ error: "This function can only be called during signup" }),
+        JSON.stringify({ error: "This function can only be called shortly after signup" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get admin user IDs
-    const { data: adminRoles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "admin");
+    const results: Record<string, unknown> = {};
 
-    if (rolesError) {
-      console.error("Error fetching admin roles:", rolesError);
-      throw new Error("Failed to fetch admin users");
+    // 2. Telegram Notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+
+    if (telegramBotToken && telegramChatId) {
+      try {
+        const formattedDate = new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" });
+        const telegramMessage = 
+          `🏊 *Nuova Registrazione Utente*\n\n` +
+          `👤 *Nome:* ${userName}\n` +
+          `📧 *Email:* ${userEmail}\n` +
+          `📅 *Data:* ${formattedDate}`;
+
+        const tgResponse = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: telegramMessage,
+            parse_mode: "Markdown",
+          }),
+        });
+
+        const tgData = await tgResponse.json();
+        if (tgData.ok) {
+          console.log("Telegram notification sent successfully:", tgData);
+          results.telegram = { success: true };
+        } else {
+          console.error("Telegram API returned error:", tgData);
+          results.telegram = { success: false, error: tgData };
+        }
+      } catch (tgError) {
+        console.error("Failed to send Telegram notification:", tgError);
+        results.telegram = { success: false, error: tgError instanceof Error ? tgError.message : "Unknown error" };
+      }
+    } else {
+      console.log("Telegram not configured (missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID)");
     }
 
-    if (!adminRoles || adminRoles.length === 0) {
-      console.log("No admin users found to notify");
+    // 3. Email Notification via Resend (optional fallback if configured)
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (resendApiKey) {
+      try {
+        const { data: adminRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin");
+
+        const adminUserIds = adminRoles?.map((r: { user_id: string }) => r.user_id) ?? [];
+        const adminEmails: string[] = [];
+
+        for (const adminId of adminUserIds) {
+          const { data: adminUser } = await supabase.auth.admin.getUserById(adminId);
+          if (adminUser?.user?.email) {
+            adminEmails.push(adminUser.user.email);
+          }
+        }
+
+        const fallbackAdminEmail = Deno.env.get("ADMIN_NOTIFICATION_EMAIL");
+        if (fallbackAdminEmail && !adminEmails.includes(fallbackAdminEmail)) {
+          adminEmails.push(fallbackAdminEmail);
+        }
+
+        if (adminEmails.length > 0) {
+          const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "Pool Manager <noreply@apneapr.it>";
+          const { Resend } = await import("https://esm.sh/resend@2.0.0");
+          const resend = new Resend(resendApiKey);
+
+          const { data: resendData, error: resendError } = await resend.emails.send({
+            from: fromEmail,
+            to: adminEmails,
+            subject: `Nuova registrazione utente: ${userName}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #0f172a; margin-top: 0;">Nuova Registrazione Utente</h2>
+                <p style="color: #475569; font-size: 15px;">Un nuovo utente si è registrato su <strong>Pool Manager</strong>:</p>
+                <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 16px; border-radius: 4px; margin: 20px 0;">
+                  <p style="margin: 6px 0;"><strong>Nome completo:</strong> ${userName}</p>
+                  <p style="margin: 6px 0;"><strong>Email:</strong> <a href="mailto:${userEmail}">${userEmail}</a></p>
+                  <p style="margin: 6px 0;"><strong>Data:</strong> ${new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" })}</p>
+                </div>
+              </div>
+            `,
+          });
+
+          if (resendError) {
+            results.email = { success: false, error: resendError };
+          } else {
+            results.email = { success: true, data: resendData };
+          }
+        }
+      } catch (emailError) {
+        results.email = { success: false, error: emailError instanceof Error ? emailError.message : "Unknown error" };
+      }
+    }
+
+    // Check if at least one notification channel was triggered or configured
+    const hasConfiguredChannel = Boolean((telegramBotToken && telegramChatId) || resendApiKey);
+    if (!hasConfiguredChannel) {
+      console.warn("No notification channels configured (neither Telegram nor Resend)");
       return new Response(
-        JSON.stringify({ message: "No admin users to notify" }),
+        JSON.stringify({ 
+          warning: "No notification channels configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Supabase Secrets.",
+          success: false 
+        }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const adminUserIds = adminRoles.map((r: { user_id: string }) => r.user_id);
-    const adminEmails = usersData.users
-      .filter((user) => adminUserIds.includes(user.id))
-      .map((user) => user.email)
-      .filter((email): email is string => !!email);
-
-    if (adminEmails.length === 0) {
-      console.log("No admin emails found");
-      return new Response(
-        JSON.stringify({ message: "No admin emails found" }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log(`Sending notification to ${adminEmails.length} admin(s) for new user: ${userEmail}`);
-
-    const { Resend } = await import("https://esm.sh/resend@2.0.0");
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-    const emailResponse = await resend.emails.send({
-      from: "Pool Manager <noreply@apneapr.it>",
-      to: adminEmails,
-      subject: "Nuova registrazione utente",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333;">Nuova Registrazione</h1>
-          <p>Un nuovo utente si è registrato sulla piattaforma:</p>
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Nome:</strong> ${userName}</p>
-            <p><strong>Email:</strong> ${userEmail}</p>
-            <p><strong>Data:</strong> ${new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" })}</p>
-          </div>
-          <p style="color: #666; font-size: 14px;">Questa è una notifica automatica dal sistema Pool Manager.</p>
-        </div>
-      `,
-    });
-
-    console.log("Email sent successfully:", emailResponse);
-
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return new Response(
+      JSON.stringify({ success: true, results }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error in notify-admin-new-user function:", error);

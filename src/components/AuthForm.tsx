@@ -48,7 +48,7 @@ export function AuthForm() {
     const password = formData.get('password') as string;
     const fullName = formData.get('fullName') as string;
 
-    const { error } = await signUp(email, password, fullName);
+    const { data: signUpData, error } = await signUp(email, password, fullName);
 
     if (error) {
       toast({
@@ -64,11 +64,23 @@ export function AuthForm() {
 
       // Notify admins about new registration
       try {
-        await supabase.functions.invoke('notify-admin-new-user', {
-          body: { userEmail: email, userName: fullName }
+        const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-admin-new-user', {
+          body: {
+            userId: signUpData?.user?.id,
+            userEmail: email,
+            userName: fullName,
+          }
         });
+
+        if (notifyError) {
+          console.error('Failed to notify admins (invoke error):', notifyError);
+        } else if (notifyData?.error) {
+          console.error('Admin notification failed:', notifyData.error, notifyData.details);
+        } else {
+          console.log('Admin notification sent successfully:', notifyData);
+        }
       } catch (notifyError) {
-        console.error('Failed to notify admins:', notifyError);
+        console.error('Unexpected error notifying admins:', notifyError);
       }
     }
 
