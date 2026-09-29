@@ -318,11 +318,6 @@ function UserCard({
                   </Badge>
                 )}
               </div>
-              <CardDescription className="mt-1">
-                Registrato il {format(new Date(user.profile.created_at), 'dd MMM yyyy', {
-                locale: it
-              })}
-              </CardDescription>
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 <EditMedicalCertificateDialog user={user} onSuccess={onUpdate}>
                   <Badge
@@ -386,6 +381,15 @@ function UserCard({
 
         <CollapsibleContent>
           <CardContent className="pt-4 space-y-4">
+            {/* Informazioni registrazione */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pb-2 border-b">
+              <span>Data registrazione:</span>
+              <span className="font-medium text-foreground">
+                {format(new Date(user.profile.created_at), 'dd MMM yyyy', {
+                  locale: it
+                })}
+              </span>
+            </div>
             {/* Credits History */}
             <div>
               <h4 className="font-medium mb-2 flex items-center gap-2">
